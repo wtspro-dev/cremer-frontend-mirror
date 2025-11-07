@@ -12,11 +12,13 @@ import {
   formatDate,
   formatDateTime,
   formatCurrency,
-  formatWeight,
   formatCNPJ,
   formatPercentage,
 } from "@/lib/formatters";
-import { calculateTotalOrderItemWithDiscounts } from "@/lib/commission-calculator";
+import {
+  calculateTotalOrderItemWithDiscounts,
+  calculateTotalOrderItemWithDiscountsAndTaxes,
+} from "@/lib/commission-calculator";
 
 export default function OrdersPage() {
   const searchParams = useSearchParams();
@@ -374,7 +376,7 @@ export default function OrdersPage() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         title={`Pedido ${orderDetail?.order_number || selectedOrderId || ""}`}
-        size="xl"
+        size="full"
       >
         {isLoadingOrderDetail ? (
           <div className="p-8 text-center text-muted-foreground">
@@ -446,18 +448,18 @@ export default function OrdersPage() {
                         <th className="text-left p-3 border-b font-medium">Embalagem</th>
                         <th className="text-center p-3 border-b font-medium">Quantidade</th>
                         <th className="text-right p-3 border-b font-medium">Valor Unit.</th>
-                        <th className="text-right p-3 border-b font-medium">IPI</th>
-                        <th className="text-right p-3 border-b font-medium">ICMS Subs.</th>
-                        <th className="text-right p-3 border-b font-medium">B.C. Subs.</th>
                         <th className="text-right p-3 border-b font-medium">Des. Com</th>
                         <th className="text-right p-3 border-b font-medium">Des. Adi</th>
-                        <th className="text-right p-3 border-b font-medium">Peso (kg)</th>
+                        <th className="text-right p-3 border-b font-medium">Total sem impostos</th>
+                        <th className="text-right p-3 border-b font-medium">IPI</th>
+                        <th className="text-right p-3 border-b font-medium">ICMS Subs.</th>
                         <th className="text-right p-3 border-b font-medium">Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {orderDetail.items.map((item) => {
-                        const totalValue = calculateTotalOrderItemWithDiscounts(item);
+                        const totalValueNoTaxes = calculateTotalOrderItemWithDiscounts(item);
+                        const totalValue = calculateTotalOrderItemWithDiscountsAndTaxes(item);
                         return (
                           <tr key={item.id} className="border-b hover:bg-muted/30">
                             <td className="p-3 font-mono">{item.product_code}</td>
@@ -465,12 +467,13 @@ export default function OrdersPage() {
                             <td className="p-3">{item.package}</td>
                             <td className="p-3 text-center">{item.quantity}</td>
                             <td className="p-3 text-right">{formatCurrency(item.unit_value)}</td>
-                            <td className="p-3 text-right">{formatCurrency(item.ipi)}</td>
-                            <td className="p-3 text-right">{formatCurrency(item.icmsubs)}</td>
-                            <td className="p-3 text-right">{formatCurrency(item.bcsubs)}</td>
                             <td className="p-3 text-right">{formatPercentage(item.disc_com)}</td>
                             <td className="p-3 text-right">{formatPercentage(item.disc_adi)}</td>
-                            <td className="p-3 text-right">{formatWeight(item.weight_kg)}</td>
+                            <td className="p-3 text-right font-medium">
+                              {formatCurrency(totalValueNoTaxes)}
+                            </td>
+                            <td className="p-3 text-right">{formatPercentage(item.ipi)}</td>
+                            <td className="p-3 text-right">{formatCurrency(item.icmsubs)}</td>
                             <td className="p-3 text-right font-medium">
                               {formatCurrency(totalValue)}
                             </td>
@@ -480,8 +483,8 @@ export default function OrdersPage() {
                     </tbody>
                     <tfoot className="bg-muted/30">
                       <tr>
-                        <td colSpan={8} className="p-3 text-right font-semibold">
-                          Total Geral:
+                        <td colSpan={7} className="p-3 text-right font-semibold">
+                          Total sem impostos:
                         </td>
                         <td className="p-3 text-right font-bold">
                           {formatCurrency(
@@ -489,6 +492,18 @@ export default function OrdersPage() {
                               (sum, item) =>
                                 sum +
                                 Math.round(calculateTotalOrderItemWithDiscounts(item) * 100) / 100,
+                              0
+                            )
+                          )}
+                        </td>
+                        <td colSpan={2} className="p-3 text-right font-semibold">
+                          Total com impostos:
+                        </td>
+                        <td className="p-3 text-right font-bold">
+                          {formatCurrency(
+                            orderDetail.items.reduce(
+                              (sum, item) =>
+                                sum + calculateTotalOrderItemWithDiscountsAndTaxes(item),
                               0
                             )
                           )}

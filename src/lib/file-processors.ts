@@ -1,34 +1,5 @@
 // Processadores de arquivos client-side
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import * as XLSX from "xlsx"; // Mantido para código comentado que pode ser reativado
 import type { SKUCommission, DeliveryDate } from "@/types/commission";
-
-/**
- * Interface para item de pedido do JSON mock
- */
-interface PedidosJsonItem {
-  n_item: string;
-  code: string;
-  description: string;
-  package: string;
-  dt_in: string;
-  qty: number;
-  unit_value: number;
-  ipi: number;
-  icmsubs: number;
-  bcsubs: number;
-  disc_com: number;
-  disc_adi: number;
-  other: number;
-  weight_kg?: number;
-  weight?: number;
-  n_order: string;
-  dt_order: string;
-  customer: string;
-  cnpj: string;
-  address: string;
-}
 
 /**
  * Interface para item de pedido parseado (equivalente ao DataFrame do Python)
@@ -134,52 +105,6 @@ export async function processSKUConfigFile(_file: File): Promise<SKUCommission[]
     reader.readAsArrayBuffer(file);
   });
   */
-}
-
-/**
- * Carrega dados de pedidos do arquivo JSON mock
- * Retorna uma lista de objetos JSON
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function processOrdersPDF(_file: File): Promise<ParsedOrderItem[]> {
-  // Ignora o arquivo e carrega o JSON mock
-  try {
-    const response = await fetch("/pedidos.json");
-    if (!response.ok) {
-      throw new Error(`Erro ao carregar dados: ${response.statusText}`);
-    }
-
-    const jsonData = (await response.json()) as PedidosJsonItem[];
-
-    // Transforma o JSON para o formato ParsedOrderItem
-    const parsedItems: ParsedOrderItem[] = jsonData.map((item) => ({
-      n_order: item.n_order,
-      dt_order: new Date(item.dt_order),
-      customer: item.customer,
-      cnpj: item.cnpj,
-      address: item.address,
-      n_item: item.n_item,
-      code: item.code,
-      description: item.description,
-      package: item.package,
-      dt_in: new Date(item.dt_in),
-      qty: item.qty,
-      unit_value: item.unit_value,
-      ipi: item.ipi,
-      icmsubs: item.icmsubs,
-      bcsubs: item.bcsubs,
-      disc_com: item.disc_com,
-      disc_adi: item.disc_adi,
-      other: item.other,
-      weight: item.weight_kg || item.weight || 0,
-    }));
-
-    return parsedItems;
-  } catch (error) {
-    throw new Error(
-      `Erro ao carregar dados de pedidos: ${error instanceof Error ? error.message : "Erro desconhecido"}`
-    );
-  }
 }
 
 /**

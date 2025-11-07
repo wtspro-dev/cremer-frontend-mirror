@@ -174,12 +174,17 @@ export function filterCommissionsByPeriod(
   });
 }
 
+export function calculateUnitValueWithDiscounts(orderItem: OrderItem): number {
+  return orderItem.unit_value * ((100 - (orderItem.disc_com + orderItem.disc_adi)) / 100);
+}
+
 export function calculateTotalOrderItemWithDiscounts(orderItem: OrderItem): number {
-  const discount =
-    Math.round(((orderItem.unit_value * (orderItem.disc_com + orderItem.disc_adi)) / 100) * 100) /
-    100;
-  return (
-    Math.round(orderItem.unit_value * orderItem.quantity * 100) / 100 -
-    Math.round(discount * orderItem.quantity * 100) / 100
-  );
+  const unitValue = calculateUnitValueWithDiscounts(orderItem);
+  return Math.round(unitValue * orderItem.quantity);
+}
+
+export function calculateTotalOrderItemWithDiscountsAndTaxes(orderItem: OrderItem): number {
+  const unitValue = calculateUnitValueWithDiscounts(orderItem);
+  const unitTaxIPI = Math.round(unitValue * (orderItem.ipi / 100));
+  return orderItem.quantity * (unitValue + unitTaxIPI + orderItem.icmsubs);
 }

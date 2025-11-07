@@ -5,7 +5,6 @@ import { Upload, File, CheckCircle2, AlertCircle } from "lucide-react";
 import type { FileUploadType } from "@/types/commission";
 import {
   processSKUConfigFile,
-  processOrdersPDF,
   processDeliveryDatesFile,
   type ParsedOrderItem,
 } from "@/lib/file-processors";
@@ -18,40 +17,6 @@ interface FileUploadProps {
   onOrdersLoaded?: (data: Order[], parsedItems?: ParsedOrderItem[], file?: File) => void;
   onDeliveryDatesLoaded?: (data: DeliveryDate[], file?: File) => void;
   onError?: (error: string) => void;
-}
-
-/**
- * Transforma ParsedOrderItem[] em Order[] agrupando itens por pedido
- */
-function transformParsedItemsToOrders(parsedItems: ParsedOrderItem[]): Order[] {
-  const orderMap = new Map<string, Order>();
-
-  parsedItems.forEach((item) => {
-    const orderId = item.n_order;
-
-    if (!orderMap.has(orderId)) {
-      orderMap.set(orderId, {
-        id: orderId,
-        date: item.dt_order,
-        items: [],
-        totalValue: 0,
-      });
-    }
-
-    const order = orderMap.get(orderId)!;
-    const totalValue = item.unit_value * item.qty;
-
-    order.items.push({
-      sku: item.code,
-      quantity: item.qty,
-      price: item.unit_value,
-      totalValue,
-    });
-
-    order.totalValue += totalValue;
-  });
-
-  return Array.from(orderMap.values());
 }
 
 const fileTypeLabels: Record<FileUploadType, { label: string; accept: string }> = {
@@ -94,9 +59,16 @@ export default function FileUpload({
   const handleFiles = async (files: File[]) => {
     if (!files || files.length === 0) return;
 
-    setIsProcessing(true);
     setStatus("idle");
     setErrorMessage("");
+
+    if (type === "orders-pdf") {
+      setUploadedFiles(files);
+      clearInput();
+      return;
+    }
+
+    setIsProcessing(true);
     setUploadedFiles(files);
 
     try {
@@ -108,43 +80,6 @@ export default function FileUpload({
             onSKUConfigLoaded?.(data, file);
           }
           setStatus("success");
-          break;
-        }
-        case "orders-pdf": {
-          try {
-            // Upload all files to API at once
-            const formData = {
-              files: files,
-            };
-
-            const response = await OrdersService.uploadOrdersV1OrdersUploadPost(formData);
-
-            if (response.success && response.data) {
-              // Successfully uploaded to API
-              // Still process locally for UI purposes if needed
-              for (const file of files) {
-                const parsedData = await processOrdersPDF(file);
-                const orders = transformParsedItemsToOrders(parsedData);
-                onOrdersLoaded?.(orders, parsedData, file);
-              }
-              setStatus("success");
-            } else {
-              // API returned an error in response
-              const errorMsg = "Erro ao fazer upload do arquivo";
-              setErrorMessage(errorMsg);
-              setStatus("error");
-              onError?.(errorMsg);
-            }
-          } catch (apiError: unknown) {
-            // Handle API exceptions (network errors, etc.)
-            const errorMsg =
-              apiError instanceof Error
-                ? apiError.message
-                : "Erro ao fazer upload do arquivo. Tente novamente.";
-            setErrorMessage(errorMsg);
-            setStatus("error");
-            onError?.(errorMsg);
-          }
           break;
         }
         case "delivery-dates": {
@@ -173,6 +108,53 @@ export default function FileUpload({
         setStatus("idle");
         setErrorMessage("");
       }, 2000);
+    }
+  };
+
+  const handleConfirmOrdersUpload = async () => {
+    if (type !== "orders-pdf" || uploadedFiles.length === 0) return;
+
+    setIsProcessing(true);
+    setStatus("idle");
+    setErrorMessage("");
+
+    let uploadSuccess = false;
+
+    try {
+      const formData = {
+        files: uploadedFiles,
+      };
+
+      const response = await OrdersService.uploadOrdersV1OrdersUploadPost(formData);
+
+      if (response.success && response.data) {
+        uploadSuccess = true;
+        setStatus("success");
+        onOrdersLoaded?.([], undefined, undefined);
+        setUploadedFiles([]);
+      } else {
+        const errorMsg = "Erro ao fazer upload do arquivo";
+        setErrorMessage(errorMsg);
+        setStatus("error");
+        onError?.(errorMsg);
+      }
+    } catch (apiError: unknown) {
+      const errorMsg =
+        apiError instanceof Error
+          ? apiError.message
+          : "Erro ao fazer upload do arquivo. Tente novamente.";
+      setErrorMessage(errorMsg);
+      setStatus("error");
+      onError?.(errorMsg);
+    } finally {
+      setIsProcessing(false);
+      clearInput();
+      if (uploadSuccess) {
+        setTimeout(() => {
+          setStatus("idle");
+          setErrorMessage("");
+        }, 2000);
+      }
     }
   };
 
@@ -240,36 +222,84 @@ export default function FileUpload({
             </p>
           </label>
         </div>
+      ) : type === "orders-pdf" ? (
+        isProcessing ? (
+          <div className="border rounded-lg p-6 text-center flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+            <p className="text-sm text-muted-foreground">
+              Processando {uploadedFiles.length} arquivos
+              {uploadedFiles.length !== 1 ? "s" : ""}...
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {uploadedFiles.map((file, index) => (
+                <div
+                  key={`${file.name}-${index}`}
+                  className="border rounded-lg p-4 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <File className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(file.size / 1024).toFixed(2)} KB
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2">
+              <button
+                onClick={handleRemove}
+                className="px-3 py-2 border rounded-md text-sm text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+              >
+                Limpar
+              </button>
+              <button
+                onClick={handleConfirmOrdersUpload}
+                disabled={uploadedFiles.length === 0}
+                className="px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Confirmar envio
+              </button>
+            </div>
+          </div>
+        )
       ) : (
         <div className="space-y-2">
-          {uploadedFiles.map((file, index) => (
-            <div
-              key={`${file.name}-${index}`}
-              className="border rounded-lg p-4 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <File className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(file.size / 1024).toFixed(2)} KB
-                  </p>
+          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            {uploadedFiles.map((file, index) => (
+              <div
+                key={`${file.name}-${index}`}
+                className="border rounded-lg p-4 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <File className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">{file.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(file.size / 1024).toFixed(2)} KB
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {status === "success" && index === uploadedFiles.length - 1 && (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  )}
+                  {status === "error" && index === uploadedFiles.length - 1 && (
+                    <AlertCircle className="h-5 w-5 text-red-500" />
+                  )}
+                  {isProcessing && index === uploadedFiles.length - 1 && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                  )}
                 </div>
               </div>
-
-              <div className="flex items-center gap-2">
-                {status === "success" && index === uploadedFiles.length - 1 && (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                )}
-                {status === "error" && index === uploadedFiles.length - 1 && (
-                  <AlertCircle className="h-5 w-5 text-red-500" />
-                )}
-                {isProcessing && index === uploadedFiles.length - 1 && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-                )}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
           {!isProcessing && (
             <button
               onClick={handleRemove}

@@ -1,0 +1,38 @@
+[
+  {
+    "sku": "94574-173",
+    "commissionPercentage": 5
+  },
+  {
+    "sku": "51485-129",
+    "commissionPercentage": 10
+  },
+  {
+    "sku": "51484-170",
+    "commissionPercentage": 9
+  },
+  {
+    "sku": "77746-135",
+    "commissionPercentage": 10
+  },
+  {
+    "sku": "51483-110",
+    "commissionPercentage": 6
+  },
+  {
+    "sku": "60098-113",
+    "commissionPercentage": 3
+  },
+  {
+    "sku": "85270-155",
+    "commissionPercentage": 6
+  },
+  {
+    "sku": "85271-120",
+    "commissionPercentage": 3
+  },
+  {
+    "sku": "51486-189",
+    "commissionPercentage": 1
+  }
+]

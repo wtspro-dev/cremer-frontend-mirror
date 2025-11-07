@@ -1,6 +1,5 @@
-import { useTranslations } from "next-intl";
+import CommissionDashboard from "@/components/commission/CommissionDashboard";
 
 export default function Home() {
-  const t = useTranslations();
-  return <div>{t("greeting")}</div>;
+  return <CommissionDashboard />;
 }

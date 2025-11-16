@@ -58,4 +58,4 @@ export interface CommissionSummary {
   items: CommissionItem[];
 }
 
-export type FileUploadType = "sku-config" | "orders-pdf" | "delivery-dates";
+export type FileUploadType = "sku-config" | "orders-pdf" | "invoices-excel";

@@ -3,13 +3,9 @@
 import { useState, useRef } from "react";
 import { Upload, File, CheckCircle2, AlertCircle } from "lucide-react";
 import type { FileUploadType } from "@/types/commission";
-import {
-  processSKUConfigFile,
-  processDeliveryDatesFile,
-  type ParsedOrderItem,
-} from "@/lib/file-processors";
+import { processSKUConfigFile, type ParsedOrderItem } from "@/lib/file-processors";
 import type { SKUCommission, Order, DeliveryDate } from "@/types/commission";
-import { OrdersService } from "@/lib/api";
+import { OrdersService, InvoicesService } from "@/lib/api";
 
 interface FileUploadProps {
   type: FileUploadType;
@@ -28,8 +24,8 @@ const fileTypeLabels: Record<FileUploadType, { label: string; accept: string }> 
     label: "Pedidos (PDF)",
     accept: ".pdf",
   },
-  "delivery-dates": {
-    label: "Datas de Entrega (Excel)",
+  "invoices-excel": {
+    label: "Acompanhamento de Pedidos (Excel)",
     accept: ".xlsx,.xls",
   },
 };
@@ -62,7 +58,7 @@ export default function FileUpload({
     setStatus("idle");
     setErrorMessage("");
 
-    if (type === "orders-pdf") {
+    if (type === "orders-pdf" || type === "invoices-excel") {
       setUploadedFiles(files);
       clearInput();
       return;
@@ -78,15 +74,6 @@ export default function FileUpload({
           for (const file of files) {
             const data = await processSKUConfigFile(file);
             onSKUConfigLoaded?.(data, file);
-          }
-          setStatus("success");
-          break;
-        }
-        case "delivery-dates": {
-          // Process each file individually
-          for (const file of files) {
-            const data = await processDeliveryDatesFile(file);
-            onDeliveryDatesLoaded?.(data, file);
           }
           setStatus("success");
           break;
@@ -131,6 +118,53 @@ export default function FileUpload({
         uploadSuccess = true;
         setStatus("success");
         onOrdersLoaded?.([], undefined, undefined);
+        setUploadedFiles([]);
+      } else {
+        const errorMsg = "Erro ao fazer upload do arquivo";
+        setErrorMessage(errorMsg);
+        setStatus("error");
+        onError?.(errorMsg);
+      }
+    } catch (apiError: unknown) {
+      const errorMsg =
+        apiError instanceof Error
+          ? apiError.message
+          : "Erro ao fazer upload do arquivo. Tente novamente.";
+      setErrorMessage(errorMsg);
+      setStatus("error");
+      onError?.(errorMsg);
+    } finally {
+      setIsProcessing(false);
+      clearInput();
+      if (uploadSuccess) {
+        setTimeout(() => {
+          setStatus("idle");
+          setErrorMessage("");
+        }, 2000);
+      }
+    }
+  };
+
+  const handleConfirmInvoicesUpload = async () => {
+    if (type !== "invoices-excel" || uploadedFiles.length === 0) return;
+
+    setIsProcessing(true);
+    setStatus("idle");
+    setErrorMessage("");
+
+    let uploadSuccess = false;
+
+    try {
+      const formData = {
+        files: uploadedFiles,
+      };
+
+      const response = await InvoicesService.uploadInvoicesV1InvoicesUploadPost(formData);
+
+      if (response.success && response.data) {
+        uploadSuccess = true;
+        setStatus("success");
+        onDeliveryDatesLoaded?.([], undefined);
         setUploadedFiles([]);
       } else {
         const errorMsg = "Erro ao fazer upload do arquivo";
@@ -222,7 +256,7 @@ export default function FileUpload({
             </p>
           </label>
         </div>
-      ) : type === "orders-pdf" ? (
+      ) : type === "orders-pdf" || type === "invoices-excel" ? (
         isProcessing ? (
           <div className="border rounded-lg p-6 text-center flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
@@ -259,7 +293,9 @@ export default function FileUpload({
                 Limpar
               </button>
               <button
-                onClick={handleConfirmOrdersUpload}
+                onClick={
+                  type === "orders-pdf" ? handleConfirmOrdersUpload : handleConfirmInvoicesUpload
+                }
                 disabled={uploadedFiles.length === 0}
                 className="px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >

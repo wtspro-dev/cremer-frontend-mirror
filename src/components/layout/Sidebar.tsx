@@ -2,7 +2,7 @@
 
 import { usePathname } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
-import { Home, Package, FolderOpen, ShoppingCart } from "lucide-react";
+import { Home, Package, FolderOpen, ShoppingCart, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarItem {
@@ -21,6 +21,11 @@ const menuItems: SidebarItem[] = [
     href: "/orders",
     label: "Pedidos",
     icon: ShoppingCart,
+  },
+  {
+    href: "/invoices",
+    label: "Notas Fiscais",
+    icon: FileText,
   },
   {
     href: "/file-batches",

@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { OrderInvoice } from './OrderInvoice';
 import type { OrderItemResponse } from './OrderItemResponse';
 export type OrderDetailResponse = {
     id: number;
@@ -15,6 +16,7 @@ export type OrderDetailResponse = {
     updated: (number | null);
     item_count: number;
     items: Array<OrderItemResponse>;
+    invoices: Array<OrderInvoice>;
     batch_file_name: (string | null);
 };
 

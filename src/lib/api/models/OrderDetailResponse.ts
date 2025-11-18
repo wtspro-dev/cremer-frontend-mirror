@@ -18,5 +18,8 @@ export type OrderDetailResponse = {
     items: Array<OrderItemResponse>;
     invoices: Array<OrderInvoice>;
     batch_file_name: (string | null);
+    total_value: number;
+    total_with_taxes: number;
+    total_commission: number;
 };
 

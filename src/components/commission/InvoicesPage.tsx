@@ -17,7 +17,7 @@ import {
 import { InvoicesService } from "@/lib/api";
 import type { InvoiceResponse, InvoiceBatchResponse } from "@/lib/api";
 import OrderDetailModal from "./OrderDetailModal";
-import { formatDate, formatCurrency } from "@/lib/formatters";
+import { formatDate, formatCurrency, formatPercentage } from "@/lib/formatters";
 
 export default function InvoicesPage() {
   const searchParams = useSearchParams();
@@ -231,7 +231,7 @@ export default function InvoicesPage() {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Número da NF, CNPJ ou código do produto..."
+                placeholder="Número da NF, número do pedido ou código do produto..."
                 value={search}
                 onChange={handleSearchChange}
                 className="w-full px-3 py-2 pr-10 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
@@ -338,9 +338,10 @@ export default function InvoicesPage() {
                       </div>
                     </button>
                   </th>
-                  <th className="text-left p-4 border-b font-medium">Status</th>
                   <th className="text-left p-4 border-b font-medium">Produto</th>
                   <th className="text-right p-4 border-b font-medium">Valor</th>
+                  <th className="text-right p-4 border-b font-medium">Comissão (%)</th>
+                  <th className="text-right p-4 border-b font-medium">Comissão (R$)</th>
                   <th className="text-center p-4 border-b font-medium">Pedido</th>
                 </tr>
               </thead>
@@ -353,11 +354,6 @@ export default function InvoicesPage() {
                       {invoice.delivery_date ? formatDate(invoice.delivery_date) : "-"}
                     </td>
                     <td className="p-4">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                        {invoice.status}
-                      </span>
-                    </td>
-                    <td className="p-4">
                       <div>
                         <div className="font-medium">{invoice.product_code}</div>
                         <div className="text-sm text-muted-foreground">
@@ -366,6 +362,12 @@ export default function InvoicesPage() {
                       </div>
                     </td>
                     <td className="p-4 text-right font-medium">{formatCurrency(invoice.value)}</td>
+                    <td className="p-4 text-right font-medium">
+                      {formatPercentage(invoice.commission_percentage)}
+                    </td>
+                    <td className="p-4 text-right font-medium">
+                      {formatCurrency(invoice.commission_value)}
+                    </td>
                     <td className="p-4">
                       <div className="flex items-center justify-center">
                         {invoice.order_id ? (

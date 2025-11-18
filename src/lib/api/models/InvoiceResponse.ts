@@ -6,12 +6,15 @@ export type InvoiceResponse = {
     id: number;
     invoice_batch_id: (number | null);
     order_id: (number | null);
+    sku_id: number;
     order_number: string;
     invoice_number: string;
     invoice_date: string;
     delivery_date: (string | null);
     status: string;
     value: number;
+    commission_percentage: number;
+    commission_value: number;
     crm_order_code: string;
     customer_cnpj: string;
     city: string;

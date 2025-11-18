@@ -4,13 +4,11 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, ExternalLink, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
-import Modal from "@/components/ui/Modal";
 import FileUpload from "./FileUpload";
 import type { Order, DeliveryDate } from "@/types/commission";
 import { ParsedOrderItem } from "@/lib/file-processors";
 import { OrdersService, InvoicesService } from "@/lib/api";
 import type { OrderBatchResponse, InvoiceBatchResponse } from "@/lib/api";
-import { calculateTotalOrderItemWithDiscounts } from "@/lib/commission-calculator";
 
 const STORAGE_KEYS = {
   deliveryDates: "uploaded_delivery_dates",
@@ -29,8 +27,6 @@ interface UploadedFile {
 export default function FileBatchesPage() {
   const [activeTab, setActiveTab] = useState<"orders" | "invoices">("orders");
   const [deliveryDatesFiles, setDeliveryDatesFiles] = useState<UploadedFile[]>([]);
-  const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
   const [search, setSearch] = useState<string>("");
   const [page, setPage] = useState<number>(0);
@@ -168,13 +164,9 @@ export default function FileBatchesPage() {
     if (file.type === "orders") {
       // Redirect to orders page with batch_id
       router.push(`/orders?batch_id=${file.id}`);
-    } else if (file.type === "invoices") {
+    } else {
       // Redirect to invoices page with batch_id
       router.push(`/invoices?batch_id=${file.id}`);
-    } else {
-      // For delivery dates, show in modal
-      setSelectedFile(file);
-      setIsModalOpen(true);
     }
   };
 
@@ -192,102 +184,6 @@ export default function FileBatchesPage() {
       setDeliveryDatesFiles(updated);
       localStorage.setItem(STORAGE_KEYS.deliveryDates, JSON.stringify(updated));
     }
-  };
-
-  const renderOrdersTable = (items: ParsedOrderItem[] | Order[]) => {
-    if (items.length === 0) return null;
-
-    // Check if it's ParsedOrderItem[]
-    const isParsedItems = items[0] && "n_order" in items[0];
-
-    if (isParsedItems) {
-      const parsedItems = items as ParsedOrderItem[];
-      return (
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-left p-2 border-b">Pedido</th>
-              <th className="text-left p-2 border-b">Data Pedido</th>
-              <th className="text-left p-2 border-b">Código</th>
-              <th className="text-left p-2 border-b">Descrição</th>
-              <th className="text-right p-2 border-b">Qtd</th>
-              <th className="text-right p-2 border-b">Valor Unit.</th>
-              <th className="text-right p-2 border-b">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {parsedItems.map((item, index) => (
-              <tr key={index} className="border-b">
-                <td className="p-2">{item.n_order}</td>
-                <td className="p-2">{item.dt_order.toLocaleDateString("pt-BR")}</td>
-                <td className="p-2">{item.code}</td>
-                <td className="p-2">{item.description}</td>
-                <td className="p-2 text-right">{item.qty}</td>
-                <td className="p-2 text-right">
-                  R$ {item.unit_value.toFixed(2).replace(".", ",")}
-                </td>
-                <td className="p-2 text-right">
-                  R$ {(item.unit_value * item.qty).toFixed(2).replace(".", ",")}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      );
-    } else {
-      const orders = items as Order[];
-      return (
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-left p-2 border-b">Pedido</th>
-              <th className="text-left p-2 border-b">Data Pedido</th>
-              <th className="text-left p-2 border-b">SKU</th>
-              <th className="text-right p-2 border-b">Quantidade</th>
-              <th className="text-right p-2 border-b">Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.flatMap((order) =>
-              order.items.map((item, idx) => (
-                <tr key={`${order.id}-${idx}`} className="border-b">
-                  <td className="p-2">{order.id}</td>
-                  <td className="p-2">{order.date.toLocaleDateString("pt-BR")}</td>
-                  <td className="p-2">{item.product_description}</td>
-                  <td className="p-2 text-right">{item.quantity}</td>
-                  <td className="p-2 text-right">
-                    R$ {calculateTotalOrderItemWithDiscounts(item).toFixed(2).replace(".", ",")}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      );
-    }
-  };
-
-  const renderDeliveryDatesTable = (items: DeliveryDate[]) => {
-    return (
-      <table className="w-full text-sm">
-        <thead className="bg-muted/50">
-          <tr>
-            <th className="text-left p-2 border-b">Pedido</th>
-            <th className="text-left p-2 border-b">SKU</th>
-            <th className="text-left p-2 border-b">Data de Entrega</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item, index) => (
-            <tr key={index} className="border-b">
-              <td className="p-2">{item.orderId}</td>
-              <td className="p-2">{item.sku}</td>
-              <td className="p-2">{item.expectedDeliveryDate.toLocaleDateString("pt-BR")}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    );
   };
 
   return (
@@ -727,39 +623,6 @@ export default function FileBatchesPage() {
           </>
         )}
       </div>
-
-      {/* Modal for viewing file details */}
-      {selectedFile && (
-        <Modal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedFile(null);
-          }}
-          title={selectedFile.name}
-          size="xl"
-        >
-          <div className="overflow-x-auto">
-            {selectedFile.type === "orders" ? (
-              selectedFile.data && selectedFile.data.length > 0 ? (
-                renderOrdersTable(selectedFile.data as ParsedOrderItem[] | Order[])
-              ) : (
-                <p className="text-muted-foreground">
-                  Os dados dos pedidos não estão disponíveis. Este arquivo contém{" "}
-                  {selectedFile.orderCount ?? 0} pedido(s).
-                </p>
-              )
-            ) : selectedFile.type === "invoices" ? (
-              <p className="text-muted-foreground">
-                Os dados das notas fiscais não estão disponíveis. Este arquivo contém{" "}
-                {selectedFile.invoiceCount ?? 0} nota(s) fiscal(is).
-              </p>
-            ) : (
-              renderDeliveryDatesTable(selectedFile.data as DeliveryDate[])
-            )}
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

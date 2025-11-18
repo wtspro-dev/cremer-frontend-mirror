@@ -13,5 +13,7 @@ export type OrderResponse = {
     created: number;
     updated: (number | null);
     item_count: number;
+    total_value: number;
+    total_with_taxes: number;
 };
 

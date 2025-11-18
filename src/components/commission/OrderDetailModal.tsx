@@ -11,10 +11,6 @@ import {
   formatCNPJ,
   formatPercentage,
 } from "@/lib/formatters";
-import {
-  calculateTotalOrderItemWithDiscounts,
-  calculateTotalOrderItemWithDiscountsAndTaxes,
-} from "@/lib/commission-calculator";
 
 interface OrderDetailModalProps {
   orderId: number | null;
@@ -131,12 +127,12 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                       <th className="text-right p-3 border-b font-medium">IPI</th>
                       <th className="text-right p-3 border-b font-medium">ICMS Subs.</th>
                       <th className="text-right p-3 border-b font-medium">Total</th>
+                      <th className="text-right p-3 border-b font-medium">Comissão (%)</th>
+                      <th className="text-right p-3 border-b font-medium">Comissão (R$)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {orderDetail.items.map((item) => {
-                      const totalValueNoTaxes = calculateTotalOrderItemWithDiscounts(item);
-                      const totalValue = calculateTotalOrderItemWithDiscountsAndTaxes(item);
                       return (
                         <tr key={item.id} className="border-b hover:bg-muted/30">
                           <td className="p-3 font-mono">{item.product_code}</td>
@@ -147,12 +143,18 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                           <td className="p-3 text-right">{formatPercentage(item.disc_com)}</td>
                           <td className="p-3 text-right">{formatPercentage(item.disc_adi)}</td>
                           <td className="p-3 text-right font-medium">
-                            {formatCurrency(totalValueNoTaxes)}
+                            {formatCurrency(item.total_value)}
                           </td>
                           <td className="p-3 text-right">{formatPercentage(item.ipi)}</td>
                           <td className="p-3 text-right">{formatCurrency(item.icmsubs)}</td>
                           <td className="p-3 text-right font-medium">
-                            {formatCurrency(totalValue)}
+                            {formatCurrency(item.total_with_taxes)}
+                          </td>
+                          <td className="p-3 text-right">
+                            {formatPercentage(item.commission_percentage)}
+                          </td>
+                          <td className="p-3 text-right">
+                            {formatCurrency(item.total_commission)}
                           </td>
                         </tr>
                       );
@@ -164,25 +166,17 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                         Total sem impostos:
                       </td>
                       <td className="p-3 text-right font-bold">
-                        {formatCurrency(
-                          orderDetail.items.reduce(
-                            (sum, item) =>
-                              sum +
-                              Math.round(calculateTotalOrderItemWithDiscounts(item) * 100) / 100,
-                            0
-                          )
-                        )}
+                        {formatCurrency(orderDetail.total_value)}
                       </td>
                       <td colSpan={2} className="p-3 text-right font-semibold">
                         Total com impostos:
                       </td>
                       <td className="p-3 text-right font-bold">
-                        {formatCurrency(
-                          orderDetail.items.reduce(
-                            (sum, item) => sum + calculateTotalOrderItemWithDiscountsAndTaxes(item),
-                            0
-                          )
-                        )}
+                        {formatCurrency(orderDetail.total_with_taxes)}
+                      </td>
+                      <td className="p-3 text-right font-semibold">Total de comissões:</td>
+                      <td className="p-3 text-right font-bold">
+                        {formatCurrency(orderDetail.total_commission)}
                       </td>
                     </tr>
                   </tfoot>

@@ -2,9 +2,11 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { OrderInvoice } from './OrderInvoice';
 export type OrderItemResponse = {
     id: number;
     order_id: number;
+    sku_id: number;
     product_code: string;
     product_description: string;
     package: string;
@@ -20,5 +22,10 @@ export type OrderItemResponse = {
     weight_kg: number;
     created: number;
     updated: (number | null);
+    commission_percentage: number;
+    total_value: number;
+    total_with_taxes: number;
+    total_commission: number;
+    invoices: Array<OrderInvoice>;
 };
 

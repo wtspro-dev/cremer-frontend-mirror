@@ -261,7 +261,7 @@ export default function FileUpload({
           <div className="border rounded-lg p-6 text-center flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
             <p className="text-sm text-muted-foreground">
-              Processando {uploadedFiles.length} arquivos
+              Processando {uploadedFiles.length} arquivo
               {uploadedFiles.length !== 1 ? "s" : ""}...
             </p>
           </div>

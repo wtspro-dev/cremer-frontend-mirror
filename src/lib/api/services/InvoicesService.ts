@@ -60,6 +60,7 @@ export class InvoicesService {
      * Get Invoices
      * @param batchId Filter by invoice batch ID
      * @param orderId Filter by order ID
+     * @param commissionPeriodId Filter by commission period ID
      * @param deliveryDateStart Start date for delivery date range filter
      * @param deliveryDateEnd End date for delivery date range filter
      * @param search Search string to match against invoice_number, customer_cnpj, or product_code
@@ -73,6 +74,7 @@ export class InvoicesService {
     public static getInvoicesV1InvoicesGet(
         batchId?: (number | null),
         orderId?: (number | null),
+        commissionPeriodId?: (number | null),
         deliveryDateStart?: (string | null),
         deliveryDateEnd?: (string | null),
         search?: (string | null),
@@ -87,6 +89,7 @@ export class InvoicesService {
             query: {
                 'batch_id': batchId,
                 'order_id': orderId,
+                'commission_period_id': commissionPeriodId,
                 'delivery_date_start': deliveryDateStart,
                 'delivery_date_end': deliveryDateEnd,
                 'search': search,

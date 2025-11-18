@@ -7,6 +7,8 @@ export type OrderInvoice = {
     invoice_number: string;
     invoice_date: string;
     delivery_date: (string | null);
+    payment_date: (string | null);
+    commission_payment_date: (string | null);
     status: string;
     value: number;
     commission_percentage: number;

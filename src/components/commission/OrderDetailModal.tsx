@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { OrdersService } from "@/lib/api";
 import type { OrderDetailResponse } from "@/lib/api";
@@ -19,6 +20,9 @@ interface OrderDetailModalProps {
 }
 
 export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDetailModalProps) {
+  const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+
   // Fetch order details when modal is open
   const { data: orderDetailResponse, isLoading: isLoadingOrderDetail } = useQuery({
     queryKey: ["orderDetail", orderId],
@@ -32,6 +36,51 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
 
   const orderDetail: OrderDetailResponse | null =
     orderDetailResponse?.success && orderDetailResponse?.data ? orderDetailResponse.data : null;
+
+  // Get related invoice IDs for a hovered item
+  const getRelatedInvoiceIds = (itemId: number): Set<number> => {
+    if (!orderDetail) return new Set();
+    const item = orderDetail.items.find((i) => i.id === itemId);
+    if (!item) return new Set();
+    return new Set(item.invoices.map((inv) => inv.id));
+  };
+
+  const relatedInvoiceIds = hoveredItemId ? getRelatedInvoiceIds(hoveredItemId) : new Set<number>();
+
+  // Get related item IDs for a selected invoice
+  const getRelatedItemIds = (invoiceId: number): Set<number> => {
+    if (!orderDetail) return new Set();
+    const invoice = orderDetail.invoices.find((inv) => inv.id === invoiceId);
+    if (!invoice) return new Set();
+    // Find items that have this invoice in their invoices array
+    return new Set(
+      orderDetail.items
+        .filter((item) => item.invoices.some((inv) => inv.id === invoiceId))
+        .map((item) => item.id)
+    );
+  };
+
+  const relatedItemIds = selectedInvoiceId
+    ? getRelatedItemIds(selectedInvoiceId)
+    : new Set<number>();
+
+  // Filter invoices and items based on selection
+  const displayedInvoices = selectedInvoiceId
+    ? orderDetail?.invoices.filter((inv) => inv.id === selectedInvoiceId) || []
+    : orderDetail?.invoices || [];
+
+  const displayedItems = selectedInvoiceId
+    ? orderDetail?.items.filter((item) => relatedItemIds.has(item.id)) || []
+    : orderDetail?.items || [];
+
+  const handleInvoiceClick = (invoiceId: number) => {
+    if (selectedInvoiceId === invoiceId) {
+      // Clicking the same invoice again deselects it
+      setSelectedInvoiceId(null);
+    } else {
+      setSelectedInvoiceId(invoiceId);
+    }
+  };
 
   return (
     <Modal
@@ -78,38 +127,107 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
               </div>
             )}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Notas Fiscais</label>
-              <p className="text-base">
-                {orderDetail.invoices && orderDetail.invoices.length > 0 ? (
-                  <a
-                    href={`/invoices?order_id=${orderDetail.id}`}
-                    className="text-blue-500 hover:underline font-medium"
-                  >
-                    {orderDetail.invoices.length} nota
-                    {orderDetail.invoices.length !== 1 ? "s" : ""} fiscal
-                    {orderDetail.invoices.length !== 1 ? "is" : ""}
-                  </a>
-                ) : (
-                  <span className="text-muted-foreground">0 notas fiscais</span>
-                )}
-              </p>
-            </div>
-            <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Criado em</label>
               <p className="text-base text-sm">{formatDateTime(orderDetail.created)}</p>
             </div>
-            {orderDetail.updated && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Atualizado em</label>
-                <p className="text-base text-sm">{formatDateTime(orderDetail.updated)}</p>
+          </div>
+
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-semibold mb-4">Notas Fiscais</h3>
+            {/* Invoices Table */}
+            {orderDetail.invoices && orderDetail.invoices.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-3 border-b font-medium">Número da Nota</th>
+                      <th className="text-left p-3 border-b font-medium">Data da Nota</th>
+                      <th className="text-left p-3 border-b font-medium">Data de Pagamento</th>
+                      <th className="text-left p-3 border-b font-medium">
+                        Data de Pagamento da Comissão
+                      </th>
+                      <th className="text-left p-3 border-b font-medium">Código do Produto</th>
+                      <th className="text-left p-3 border-b font-medium">Descrição do Produto</th>
+                      <th className="text-right p-3 border-b font-medium">Valor Total</th>
+                      <th className="text-right p-3 border-b font-medium">Comissão Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayedInvoices.map((invoice) => {
+                      const isHighlighted = relatedInvoiceIds.has(invoice.id);
+                      const isSelected = selectedInvoiceId === invoice.id;
+                      return (
+                        <tr
+                          key={invoice.id}
+                          onClick={() => handleInvoiceClick(invoice.id)}
+                          className={`border-b transition-colors cursor-pointer ${
+                            isSelected
+                              ? "bg-primary/20 hover:bg-primary/25"
+                              : isHighlighted
+                                ? "bg-primary/10 hover:bg-primary/15"
+                                : "hover:bg-muted/30"
+                          }`}
+                        >
+                          <td className="p-3 font-medium">{invoice.invoice_number}</td>
+                          <td className="p-3">{formatDate(invoice.invoice_date)}</td>
+                          <td className="p-3">
+                            {invoice.payment_date ? formatDate(invoice.payment_date) : "-"}
+                          </td>
+                          <td className="p-3">
+                            {invoice.commission_payment_date
+                              ? formatDate(invoice.commission_payment_date)
+                              : "-"}
+                          </td>
+                          <td className="p-3 font-mono">{invoice.product_code}</td>
+                          <td className="p-3">{invoice.product_description}</td>
+                          <td className="p-3 text-right font-medium">
+                            {formatCurrency(invoice.value)}
+                          </td>
+                          <td className="p-3 text-right font-medium">
+                            {formatCurrency(invoice.commission_value)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="bg-muted/30">
+                    <tr>
+                      <td colSpan={3} className="p-3 text-right font-semibold">
+                        Total:
+                      </td>
+                      <td className="p-3 text-right font-bold">
+                        {formatCurrency(displayedInvoices.reduce((sum, inv) => sum + inv.value, 0))}
+                      </td>
+                      <td className="p-3 text-right font-bold">
+                        {formatCurrency(
+                          displayedInvoices.reduce((sum, inv) => sum + inv.commission_value, 0)
+                        )}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
+            ) : (
+              <p className="text-muted-foreground text-center text-red-500">
+                Nenhuma nota fiscal encontrada
+              </p>
             )}
           </div>
 
           {/* Order Items */}
           <div className="border-t pt-4">
-            <h3 className="text-lg font-semibold mb-4">Itens do Pedido</h3>
-            {orderDetail.items.length === 0 ? (
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Itens do Pedido</h3>
+              {selectedInvoiceId && (
+                <button
+                  onClick={() => setSelectedInvoiceId(null)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Mostrar todos os itens
+                </button>
+              )}
+            </div>
+            {displayedItems.length === 0 ? (
               <p className="text-muted-foreground">Nenhum item encontrado</p>
             ) : (
               <div className="overflow-x-auto">
@@ -132,9 +250,24 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                     </tr>
                   </thead>
                   <tbody>
-                    {orderDetail.items.map((item) => {
+                    {displayedItems.map((item) => {
+                      const isHighlighted = hoveredItemId === item.id;
+                      const isRelatedToSelected = selectedInvoiceId
+                        ? relatedItemIds.has(item.id)
+                        : false;
                       return (
-                        <tr key={item.id} className="border-b hover:bg-muted/30">
+                        <tr
+                          key={item.id}
+                          className={`border-b transition-colors ${
+                            isRelatedToSelected
+                              ? "bg-primary/20 hover:bg-primary/25"
+                              : isHighlighted
+                                ? "bg-primary/10 hover:bg-primary/15"
+                                : "hover:bg-muted/30"
+                          }`}
+                          onMouseEnter={() => setHoveredItemId(item.id)}
+                          onMouseLeave={() => setHoveredItemId(null)}
+                        >
                           <td className="p-3 font-mono">{item.product_code}</td>
                           <td className="p-3">{item.product_description}</td>
                           <td className="p-3">{item.package}</td>
@@ -166,17 +299,23 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                         Total sem impostos:
                       </td>
                       <td className="p-3 text-right font-bold">
-                        {formatCurrency(orderDetail.total_value)}
+                        {formatCurrency(
+                          displayedItems.reduce((sum, item) => sum + item.total_value, 0)
+                        )}
                       </td>
                       <td colSpan={2} className="p-3 text-right font-semibold">
                         Total com impostos:
                       </td>
                       <td className="p-3 text-right font-bold">
-                        {formatCurrency(orderDetail.total_with_taxes)}
+                        {formatCurrency(
+                          displayedItems.reduce((sum, item) => sum + item.total_with_taxes, 0)
+                        )}
                       </td>
                       <td className="p-3 text-right font-semibold">Total de comissões:</td>
                       <td className="p-3 text-right font-bold">
-                        {formatCurrency(orderDetail.total_commission)}
+                        {formatCurrency(
+                          displayedItems.reduce((sum, item) => sum + item.total_commission, 0)
+                        )}
                       </td>
                     </tr>
                   </tfoot>

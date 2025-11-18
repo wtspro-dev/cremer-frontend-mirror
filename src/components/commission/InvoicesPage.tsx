@@ -27,6 +27,7 @@ export default function InvoicesPage() {
   const [invoiceDateEnd, setInvoiceDateEnd] = useState<string>("");
   const [batchId, setBatchId] = useState<number | null>(null);
   const [orderId, setOrderId] = useState<number | null>(null);
+  const [commissionPeriodId, setCommissionPeriodId] = useState<number | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [sort, setSort] = useState<string>("desc");
@@ -34,10 +35,11 @@ export default function InvoicesPage() {
   const [page, setPage] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
 
-  // Read batch_id and order_id from URL query params
+  // Read batch_id, order_id, and commission_period_id from URL query params
   useEffect(() => {
     const batchIdParam = searchParams.get("batch_id");
     const orderIdParam = searchParams.get("order_id");
+    const commissionPeriodIdParam = searchParams.get("commission_period_id");
 
     if (batchIdParam) {
       const id = parseInt(batchIdParam, 10);
@@ -60,6 +62,17 @@ export default function InvoicesPage() {
     } else {
       setOrderId(null);
     }
+
+    if (commissionPeriodIdParam) {
+      const id = parseInt(commissionPeriodIdParam, 10);
+      if (!isNaN(id)) {
+        setCommissionPeriodId(id);
+      } else {
+        setCommissionPeriodId(null);
+      }
+    } else {
+      setCommissionPeriodId(null);
+    }
   }, [searchParams]);
 
   const handleClearBatchFilter = () => {
@@ -73,6 +86,13 @@ export default function InvoicesPage() {
     setOrderId(null);
     const params = new URLSearchParams(searchParams.toString());
     params.delete("order_id");
+    router.push(`/invoices?${params.toString()}`);
+  };
+
+  const handleClearCommissionPeriodFilter = () => {
+    setCommissionPeriodId(null);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("commission_period_id");
     router.push(`/invoices?${params.toString()}`);
   };
 
@@ -95,7 +115,16 @@ export default function InvoicesPage() {
   // Reset to first page when filters change
   useEffect(() => {
     setPage(0);
-  }, [batchId, orderId, search, invoiceDateStart, invoiceDateEnd, sort, excludeNullDeliveryDate]);
+  }, [
+    batchId,
+    orderId,
+    commissionPeriodId,
+    search,
+    invoiceDateStart,
+    invoiceDateEnd,
+    sort,
+    excludeNullDeliveryDate,
+  ]);
 
   // Fetch invoices from API
   const {
@@ -107,6 +136,7 @@ export default function InvoicesPage() {
       "invoices",
       batchId,
       orderId,
+      commissionPeriodId,
       search,
       invoiceDateStart,
       invoiceDateEnd,
@@ -119,6 +149,7 @@ export default function InvoicesPage() {
       const response = await InvoicesService.getInvoicesV1InvoicesGet(
         batchId,
         orderId,
+        commissionPeriodId,
         invoiceDateStart || null,
         invoiceDateEnd || null,
         search || null,
@@ -188,8 +219,8 @@ export default function InvoicesPage() {
 
       {/* Filters */}
       <div className="bg-card border rounded-lg p-4 space-y-4">
-        {/* Batch and Order Badges */}
-        {(batchId && currentBatch) || orderId ? (
+        {/* Batch, Order, and Commission Period Badges */}
+        {(batchId && currentBatch) || orderId || commissionPeriodId ? (
           <div className="flex items-center gap-2 flex-wrap">
             {batchId && currentBatch && (
               <>
@@ -213,6 +244,18 @@ export default function InvoicesPage() {
                   onClick={handleClearOrderFilter}
                   className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
                   aria-label="Limpar filtro de pedido"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            {commissionPeriodId && (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-md border border-primary/20">
+                <span className="text-sm font-medium">Período: {commissionPeriodId}</span>
+                <button
+                  onClick={handleClearCommissionPeriodFilter}
+                  className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                  aria-label="Limpar filtro de período"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -338,6 +381,8 @@ export default function InvoicesPage() {
                       </div>
                     </button>
                   </th>
+                  <th className="text-left p-4 border-b font-medium">Data de Pagamento</th>
+                  <th className="text-left p-4 border-b font-medium">Data de Pagamento Comissão</th>
                   <th className="text-left p-4 border-b font-medium">Produto</th>
                   <th className="text-right p-4 border-b font-medium">Valor</th>
                   <th className="text-right p-4 border-b font-medium">Comissão (%)</th>
@@ -352,6 +397,14 @@ export default function InvoicesPage() {
                     <td className="p-4">{formatDate(invoice.invoice_date)}</td>
                     <td className="p-4">
                       {invoice.delivery_date ? formatDate(invoice.delivery_date) : "-"}
+                    </td>
+                    <td className="p-4">
+                      {invoice.payment_date ? formatDate(invoice.payment_date) : "-"}
+                    </td>
+                    <td className="p-4">
+                      {invoice.commission_payment_date
+                        ? formatDate(invoice.commission_payment_date)
+                        : "-"}
                     </td>
                     <td className="p-4">
                       <div>

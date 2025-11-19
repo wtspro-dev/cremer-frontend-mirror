@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { Search, Calendar, Package, X, Eye, ChevronLeft, ChevronRight } from "lucide-react";
-import { OrdersService } from "@/lib/api";
+import { OrdersService, OrderBillingStatus } from "@/lib/api";
 import type { OrderResponse, OrderBatchResponse } from "@/lib/api";
 import OrderDetailModal from "./OrderDetailModal";
 import { formatDate, formatCNPJ } from "@/lib/formatters";
@@ -19,12 +19,14 @@ export default function OrdersPage() {
   const [batchId, setBatchId] = useState<number | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [billingStatus, setBillingStatus] = useState<OrderBillingStatus>(OrderBillingStatus.ALL);
   const [page, setPage] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
 
-  // Read batch_id and order_id from URL query params
+  // Read batch_id and billing_status from URL query params
   useEffect(() => {
     const batchIdParam = searchParams.get("batch_id");
+    const billingStatusParam = searchParams.get("billing_status");
 
     if (batchIdParam) {
       const id = parseInt(batchIdParam, 10);
@@ -35,6 +37,16 @@ export default function OrdersPage() {
       }
     } else {
       setBatchId(null);
+    }
+
+    if (billingStatusParam) {
+      if (billingStatusParam === OrderBillingStatus.ALL) {
+        setBillingStatus(OrderBillingStatus.ALL);
+      } else if (billingStatusParam === OrderBillingStatus.FULLY_BILLED) {
+        setBillingStatus(OrderBillingStatus.FULLY_BILLED);
+      } else if (billingStatusParam === OrderBillingStatus.NOT_FULLY_BILLED) {
+        setBillingStatus(OrderBillingStatus.NOT_FULLY_BILLED);
+      }
     }
   }, [searchParams]);
 
@@ -64,7 +76,7 @@ export default function OrdersPage() {
   // Reset to first page when filters change
   useEffect(() => {
     setPage(0);
-  }, [batchId, search, orderDateStart, orderDateEnd]);
+  }, [batchId, search, orderDateStart, orderDateEnd, billingStatus]);
 
   // Fetch orders from API
   const {
@@ -72,13 +84,14 @@ export default function OrdersPage() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["orders", batchId, search, orderDateStart, orderDateEnd, page, limit],
+    queryKey: ["orders", batchId, search, orderDateStart, orderDateEnd, billingStatus, page, limit],
     queryFn: async () => {
       const response = await OrdersService.getOrdersV1OrdersGet(
         batchId,
         orderDateStart || null,
         orderDateEnd || null,
         search || null,
+        billingStatus,
         page,
         limit
       );
@@ -115,6 +128,10 @@ export default function OrdersPage() {
 
   const handleDateEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setOrderDateEnd(e.target.value);
+  };
+
+  const handleBillingStatusChange = (value: OrderBillingStatus) => {
+    setBillingStatus(value);
   };
 
   const handleViewOrder = (orderId: number) => {
@@ -205,6 +222,46 @@ export default function OrdersPage() {
               onChange={handleDateEndChange}
               className="w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
             />
+          </div>
+        </div>
+
+        {/* Billing Status Filter Radio Buttons */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Filtrar por status de faturamento:</label>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="billing-status-filter"
+                value={OrderBillingStatus.ALL}
+                checked={billingStatus === OrderBillingStatus.ALL}
+                onChange={() => handleBillingStatusChange(OrderBillingStatus.ALL)}
+                className="h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm">Todos</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="billing-status-filter"
+                value={OrderBillingStatus.FULLY_BILLED}
+                checked={billingStatus === OrderBillingStatus.FULLY_BILLED}
+                onChange={() => handleBillingStatusChange(OrderBillingStatus.FULLY_BILLED)}
+                className="h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm">Totalmente faturados</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="billing-status-filter"
+                value={OrderBillingStatus.NOT_FULLY_BILLED}
+                checked={billingStatus === OrderBillingStatus.NOT_FULLY_BILLED}
+                onChange={() => handleBillingStatusChange(OrderBillingStatus.NOT_FULLY_BILLED)}
+                className="h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm">Não totalmente faturados</span>
+            </label>
           </div>
         </div>
       </div>

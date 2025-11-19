@@ -5,6 +5,7 @@
 import type { ApiResponse_OrderDetailResponse__ApiResponseError_ } from '../models/ApiResponse_OrderDetailResponse__ApiResponseError_';
 import type { ApiResponse_UploadOrdersResponse__ApiResponseError_ } from '../models/ApiResponse_UploadOrdersResponse__ApiResponseError_';
 import type { Body_upload_orders_v1_orders_upload_post } from '../models/Body_upload_orders_v1_orders_upload_post';
+import type { OrderBillingStatus } from '../models/OrderBillingStatus';
 import type { PaginatedApiResponse_list_OrderBatchResponse___ApiResponseError_ } from '../models/PaginatedApiResponse_list_OrderBatchResponse___ApiResponseError_';
 import type { PaginatedApiResponse_list_OrderResponse___ApiResponseError_ } from '../models/PaginatedApiResponse_list_OrderResponse___ApiResponseError_';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -62,6 +63,7 @@ export class OrdersService {
      * @param orderDateStart Start date for order date range filter
      * @param orderDateEnd End date for order date range filter
      * @param search Search string to match against order_number, customer_name, or customer_cnpj
+     * @param billingStatus
      * @param page Page number (0-indexed)
      * @param limit Number of items per page
      * @returns PaginatedApiResponse_list_OrderResponse___ApiResponseError_ Successful Response
@@ -72,6 +74,7 @@ export class OrdersService {
         orderDateStart?: (string | null),
         orderDateEnd?: (string | null),
         search?: (string | null),
+        billingStatus: OrderBillingStatus = 'all',
         page?: number,
         limit: number = 25,
     ): CancelablePromise<PaginatedApiResponse_list_OrderResponse___ApiResponseError_> {
@@ -83,6 +86,7 @@ export class OrdersService {
                 'order_date_start': orderDateStart,
                 'order_date_end': orderDateEnd,
                 'search': search,
+                'billing_status': billingStatus,
                 'page': page,
                 'limit': limit,
             },

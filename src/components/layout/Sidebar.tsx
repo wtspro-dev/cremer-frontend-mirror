@@ -64,8 +64,7 @@ export default function Sidebar() {
         isCollapsed ? "w-16" : "w-64"
       )}
     >
-      <div className="p-6 border-b flex items-center justify-between">
-        {!isCollapsed && <h1 className="text-xl font-bold">Comissões Cremer</h1>}
+      <div className="p-6 border-b flex items-center justify-end">
         <button
           onClick={toggleCollapse}
           className={cn(

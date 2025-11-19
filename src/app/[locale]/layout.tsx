@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 
 export const metadata: Metadata = {
-  title: "Comissão de Vendas Cremer",
+  title: "Dashboard de Comissão de Vendas",
 };
 
 export default async function RootLayout({

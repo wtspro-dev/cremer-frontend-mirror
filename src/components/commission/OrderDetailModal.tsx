@@ -149,7 +149,8 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                       <th className="text-left p-3 border-b font-medium">Código do Produto</th>
                       <th className="text-left p-3 border-b font-medium">Descrição do Produto</th>
                       <th className="text-right p-3 border-b font-medium">Valor Total</th>
-                      <th className="text-right p-3 border-b font-medium">Comissão Total</th>
+                      <th className="text-right p-3 border-b font-medium">Comissão (%)</th>
+                      <th className="text-right p-3 border-b font-medium">Comissão (R$)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -182,6 +183,9 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                           <td className="p-3">{invoice.product_description}</td>
                           <td className="p-3 text-right font-medium">
                             {formatCurrency(invoice.value)}
+                          </td>
+                          <td className="p-3 text-right font-medium">
+                            {formatPercentage(invoice.commission_percentage)}
                           </td>
                           <td className="p-3 text-right font-medium">
                             {formatCurrency(invoice.commission_value)}

@@ -1,12 +1,19 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "@/i18n/navigation";
-import { CommissionPeriodsService, InvoicesService } from "@/lib/api";
+import {
+  CommissionPeriodsService,
+  InvoiceDeliveryState,
+  InvoicesService,
+  OrdersService,
+  OrderBillingStatus,
+} from "@/lib/api";
 import type { CommissionPeriodResponse } from "@/lib/api";
 import { formatCurrency } from "@/lib/formatters";
-import { TrendingUp, Calendar, DollarSign, X, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { TrendingUp, Calendar, DollarSign, AlertCircle, ShoppingCart } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -20,7 +27,6 @@ import {
 
 export default function CommissionDashboard() {
   const router = useRouter();
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Fetch all commission periods
   const {
@@ -44,8 +50,14 @@ export default function CommissionDashboard() {
   const { data: unscheduledInvoicesResponse } = useQuery({
     queryKey: ["unscheduledInvoices"],
     queryFn: async () => {
-      const response = await InvoicesService.getNotScheduledInvoicesV1InvoicesNotScheduledGet(
+      const response = await InvoicesService.getInvoicesV1InvoicesGet(
         null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        InvoiceDeliveryState.UNSCHEDULED,
         0,
         100 // Get a large number to calculate total
       );
@@ -63,6 +75,43 @@ export default function CommissionDashboard() {
     }
     return 0;
   }, [unscheduledInvoicesResponse]);
+
+  // Fetch fully billed orders
+  const { data: fullyBilledOrdersResponse } = useQuery({
+    queryKey: ["fullyBilledOrders"],
+    queryFn: async () => {
+      const response = await OrdersService.getOrdersV1OrdersGet(
+        null,
+        null,
+        null,
+        null,
+        OrderBillingStatus.FULLY_BILLED,
+        0,
+        1 // Only need the total, so limit to 1
+      );
+      return response;
+    },
+  });
+
+  // Fetch not fully billed orders
+  const { data: notFullyBilledOrdersResponse } = useQuery({
+    queryKey: ["notFullyBilledOrders"],
+    queryFn: async () => {
+      const response = await OrdersService.getOrdersV1OrdersGet(
+        null,
+        null,
+        null,
+        null,
+        OrderBillingStatus.NOT_FULLY_BILLED,
+        0,
+        1 // Only need the total, so limit to 1
+      );
+      return response;
+    },
+  });
+
+  const fullyBilledCount = fullyBilledOrdersResponse?.total ?? 0;
+  const notFullyBilledCount = notFullyBilledOrdersResponse?.total ?? 0;
 
   // Calculate current date and determine period categories
   const {
@@ -214,19 +263,40 @@ export default function CommissionDashboard() {
     };
   }, [periodsResponse]);
 
-  // Handle toast auto-dismiss
-  useEffect(() => {
-    if (toastMessage) {
-      const timer = setTimeout(() => {
-        setToastMessage(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMessage]);
-
-  const handlePeriodClick = (periodId: number, periodLabel: string) => {
-    setToastMessage(`Filtrando por período: ${periodLabel}`);
+  const handlePeriodClick = (periodId: number) => {
     router.push(`/invoices?commission_period_id=${periodId}`);
+  };
+
+  const handleLastPeriodClick = () => {
+    if (lastPeriod) {
+      router.push(`/invoices?commission_period_id=${lastPeriod.id}`);
+    }
+  };
+
+  const handleCurrentPeriodClick = () => {
+    if (currentPeriod) {
+      router.push(`/invoices?commission_period_id=${currentPeriod.id}`);
+    }
+  };
+
+  const handleFuturePeriodsClick = () => {
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    router.push(
+      `/invoices?commission_date_start=${todayStr}&delivery_state=${InvoiceDeliveryState.SCHEDULED}`
+    );
+  };
+
+  const handleUnscheduledClick = () => {
+    router.push(`/invoices?delivery_state=${InvoiceDeliveryState.UNSCHEDULED}`);
+  };
+
+  const handleFullyBilledClick = () => {
+    router.push(`/orders?billing_status=${OrderBillingStatus.FULLY_BILLED}`);
+  };
+
+  const handleNotFullyBilledClick = () => {
+    router.push(`/orders?billing_status=${OrderBillingStatus.NOT_FULLY_BILLED}`);
   };
 
   if (isLoading) {
@@ -258,9 +328,16 @@ export default function CommissionDashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {/* Last Period */}
-        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+        <div
+          onClick={handleLastPeriodClick}
+          className={cn(
+            "bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6",
+            lastPeriod &&
+              "cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors"
+          )}
+        >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-blue-700 dark:text-blue-300">
               Último recebimento
@@ -280,7 +357,13 @@ export default function CommissionDashboard() {
         </div>
 
         {/* Current Period */}
-        <div className="bg-primary/10 border border-primary/30 rounded-lg p-6">
+        <div
+          onClick={handleCurrentPeriodClick}
+          className={cn(
+            "bg-primary/10 border border-primary/30 rounded-lg p-6",
+            currentPeriod && "cursor-pointer hover:bg-primary/15 transition-colors"
+          )}
+        >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-primary">Próximo recebimento</h3>
             <TrendingUp className="h-5 w-5 text-primary" />
@@ -296,7 +379,10 @@ export default function CommissionDashboard() {
         </div>
 
         {/* Future Periods */}
-        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-6">
+        <div
+          onClick={handleFuturePeriodsClick}
+          className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-6 cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-950/30 transition-colors"
+        >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
               Recebimentos futuros
@@ -314,7 +400,10 @@ export default function CommissionDashboard() {
         </div>
 
         {/* Unscheduled Invoices */}
-        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+        <div
+          onClick={handleUnscheduledClick}
+          className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-6 cursor-pointer hover:bg-red-100 dark:hover:bg-red-950/30 transition-colors"
+        >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-red-700 dark:text-red-300">Sem agendamento</h3>
             <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
@@ -322,12 +411,46 @@ export default function CommissionDashboard() {
           <div className="space-y-1">
             <p className="text-xs text-red-600 dark:text-red-400">
               {unscheduledInvoicesResponse?.success && unscheduledInvoicesResponse?.data
-                ? `${unscheduledInvoicesResponse.data.length} nota${unscheduledInvoicesResponse.data.length !== 1 ? "s" : ""} fiscal${unscheduledInvoicesResponse.data.length !== 1 ? "is" : ""}`
+                ? `${unscheduledInvoicesResponse.data.length} nota${unscheduledInvoicesResponse.data.length !== 1 ? "s" : ""} fisca${unscheduledInvoicesResponse.data.length !== 1 ? "is" : "l"}`
                 : "0 nota fiscal"}
             </p>
             <p className="text-3xl font-bold text-red-700 dark:text-red-300">
               {formatCurrency(unscheduledTotal)}
             </p>
+          </div>
+        </div>
+
+        {/* Billing Status */}
+        <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-purple-700 dark:text-purple-300">
+              Status de Faturamento
+            </h3>
+            <ShoppingCart className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div className="space-y-2">
+            <div
+              onClick={handleFullyBilledClick}
+              className="cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-950/30 rounded-md p-2 -m-2 transition-colors"
+            >
+              <p className="text-xs text-purple-600 dark:text-purple-400">Totalmente faturados</p>
+              <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                {fullyBilledCount}
+              </p>
+            </div>
+            <div className="border-t border-purple-200 dark:border-purple-800 pt-2">
+              <div
+                onClick={handleNotFullyBilledClick}
+                className="cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-950/30 rounded-md p-2 -m-2 transition-colors"
+              >
+                <p className="text-xs text-purple-600 dark:text-purple-400">
+                  Não totalmente faturados
+                </p>
+                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                  {notFullyBilledCount}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -368,7 +491,7 @@ export default function CommissionDashboard() {
               onClick={(data, index) => {
                 if (data && index !== undefined && chartData[index]) {
                   const chartItem = chartData[index];
-                  handlePeriodClick(chartItem.id, chartItem.label);
+                  handlePeriodClick(chartItem.id);
                 }
               }}
               style={{ cursor: "pointer" }}
@@ -402,20 +525,6 @@ export default function CommissionDashboard() {
           </div>
         </div>
       </div>
-
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-4 right-4 bg-card border border-primary/20 rounded-lg shadow-lg p-4 flex items-center gap-3 z-50 transition-all duration-300">
-          <p className="text-sm">{toastMessage}</p>
-          <button
-            onClick={() => setToastMessage(null)}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Fechar notificação"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@
 import type { ApiResponse_InvoiceDetailResponse__ApiResponseError_ } from '../models/ApiResponse_InvoiceDetailResponse__ApiResponseError_';
 import type { ApiResponse_UploadInvoicesResponse__ApiResponseError_ } from '../models/ApiResponse_UploadInvoicesResponse__ApiResponseError_';
 import type { Body_upload_invoices_v1_invoices_upload_post } from '../models/Body_upload_invoices_v1_invoices_upload_post';
+import type { InvoiceDeliveryState } from '../models/InvoiceDeliveryState';
 import type { PaginatedApiResponse_list_InvoiceBatchResponse___ApiResponseError_ } from '../models/PaginatedApiResponse_list_InvoiceBatchResponse___ApiResponseError_';
 import type { PaginatedApiResponse_list_InvoiceResponse___ApiResponseError_ } from '../models/PaginatedApiResponse_list_InvoiceResponse___ApiResponseError_';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -61,11 +62,10 @@ export class InvoicesService {
      * @param batchId Filter by invoice batch ID
      * @param orderId Filter by order ID
      * @param commissionPeriodId Filter by commission period ID
-     * @param deliveryDateStart Start date for delivery date range filter
-     * @param deliveryDateEnd End date for delivery date range filter
+     * @param commissionPaymentDateStart Start date for commission payment date range filter
+     * @param commissionPaymentDateEnd End date for commission payment date range filter
      * @param search Search string to match against invoice_number, customer_cnpj, or product_code
-     * @param excludeNullDeliveryDate If True, exclude invoices without a delivery date defined
-     * @param sort Sort order: 'asc' or 'desc' (default: 'desc')
+     * @param deliveryState
      * @param page Page number (0-indexed)
      * @param limit Number of items per page
      * @returns PaginatedApiResponse_list_InvoiceResponse___ApiResponseError_ Successful Response
@@ -75,11 +75,10 @@ export class InvoicesService {
         batchId?: (number | null),
         orderId?: (number | null),
         commissionPeriodId?: (number | null),
-        deliveryDateStart?: (string | null),
-        deliveryDateEnd?: (string | null),
+        commissionPaymentDateStart?: (string | null),
+        commissionPaymentDateEnd?: (string | null),
         search?: (string | null),
-        excludeNullDeliveryDate: boolean = false,
-        sort: string = 'desc',
+        deliveryState: InvoiceDeliveryState = 'all',
         page?: number,
         limit: number = 25,
     ): CancelablePromise<PaginatedApiResponse_list_InvoiceResponse___ApiResponseError_> {
@@ -90,37 +89,10 @@ export class InvoicesService {
                 'batch_id': batchId,
                 'order_id': orderId,
                 'commission_period_id': commissionPeriodId,
-                'delivery_date_start': deliveryDateStart,
-                'delivery_date_end': deliveryDateEnd,
+                'commission_payment_date_start': commissionPaymentDateStart,
+                'commission_payment_date_end': commissionPaymentDateEnd,
                 'search': search,
-                'exclude_null_delivery_date': excludeNullDeliveryDate,
-                'sort': sort,
-                'page': page,
-                'limit': limit,
-            },
-            errors: {
-                422: `Validation Error`,
-            },
-        });
-    }
-    /**
-     * Get Not Scheduled Invoices
-     * @param search Search string to match against invoice_number, customer_cnpj, product_code, or order_number
-     * @param page Page number (0-indexed)
-     * @param limit Number of items per page
-     * @returns PaginatedApiResponse_list_InvoiceResponse___ApiResponseError_ Successful Response
-     * @throws ApiError
-     */
-    public static getNotScheduledInvoicesV1InvoicesNotScheduledGet(
-        search?: (string | null),
-        page?: number,
-        limit: number = 25,
-    ): CancelablePromise<PaginatedApiResponse_list_InvoiceResponse___ApiResponseError_> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/v1/invoices/not-scheduled',
-            query: {
-                'search': search,
+                'delivery_state': deliveryState,
                 'page': page,
                 'limit': limit,
             },

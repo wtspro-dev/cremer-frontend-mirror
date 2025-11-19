@@ -4,22 +4,14 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
-import {
-  Search,
-  Calendar,
-  FileText,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  ArrowUp,
-  ArrowDown,
-} from "lucide-react";
+import { Search, Calendar, FileText, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { InvoicesService, OrdersService, CommissionPeriodsService } from "@/lib/api";
 import type {
   InvoiceResponse,
   InvoiceBatchResponse,
   OrderDetailResponse,
   CommissionPeriodResponse,
+  InvoiceDeliveryState,
 } from "@/lib/api";
 import OrderDetailModal from "./OrderDetailModal";
 import { formatDate, formatCurrency, formatPercentage } from "@/lib/formatters";
@@ -35,16 +27,17 @@ export default function InvoicesPage() {
   const [commissionPeriodId, setCommissionPeriodId] = useState<number | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
-  const [sort, setSort] = useState<string>("desc");
   const [scheduleFilter, setScheduleFilter] = useState<"all" | "scheduled" | "unscheduled">("all");
   const [page, setPage] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
 
-  // Read batch_id, order_id, and commission_period_id from URL query params
+  // Read batch_id, order_id, commission_period_id, delivery_date_start, and delivery_state from URL query params
   useEffect(() => {
     const batchIdParam = searchParams.get("batch_id");
     const orderIdParam = searchParams.get("order_id");
     const commissionPeriodIdParam = searchParams.get("commission_period_id");
+    const commissionDateStartParam = searchParams.get("commission_date_start");
+    const deliveryStateParam = searchParams.get("delivery_state");
 
     if (batchIdParam) {
       const id = parseInt(batchIdParam, 10);
@@ -77,6 +70,18 @@ export default function InvoicesPage() {
       }
     } else {
       setCommissionPeriodId(null);
+    }
+
+    if (commissionDateStartParam) {
+      setInvoiceDateStart(commissionDateStartParam);
+    }
+
+    if (deliveryStateParam) {
+      if (deliveryStateParam === "scheduled" || deliveryStateParam === "unscheduled") {
+        setScheduleFilter(deliveryStateParam);
+      } else if (deliveryStateParam === "all") {
+        setScheduleFilter("all");
+      }
     }
   }, [searchParams]);
 
@@ -160,7 +165,6 @@ export default function InvoicesPage() {
     search,
     invoiceDateStart,
     invoiceDateEnd,
-    sort,
     scheduleFilter,
   ]);
 
@@ -179,23 +183,10 @@ export default function InvoicesPage() {
       invoiceDateStart,
       invoiceDateEnd,
       scheduleFilter,
-      sort,
       page,
       limit,
     ],
     queryFn: async () => {
-      // If filtering for unscheduled invoices, use the dedicated endpoint
-      if (scheduleFilter === "unscheduled") {
-        const response = await InvoicesService.getNotScheduledInvoicesV1InvoicesNotScheduledGet(
-          search || null,
-          page,
-          limit
-        );
-        return response;
-      }
-
-      // For "all" or "scheduled", use the main endpoint
-      const excludeNullDeliveryDate = scheduleFilter === "scheduled";
       const response = await InvoicesService.getInvoicesV1InvoicesGet(
         batchId,
         orderId,
@@ -203,8 +194,7 @@ export default function InvoicesPage() {
         invoiceDateStart || null,
         invoiceDateEnd || null,
         search || null,
-        excludeNullDeliveryDate,
-        sort,
+        scheduleFilter as InvoiceDeliveryState,
         page,
         limit
       );
@@ -241,10 +231,6 @@ export default function InvoicesPage() {
 
   const handleDateEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInvoiceDateEnd(e.target.value);
-  };
-
-  const handleSortToggle = () => {
-    setSort(sort === "desc" ? "asc" : "desc");
   };
 
   const handleScheduleFilterChange = (value: "all" | "scheduled" | "unscheduled") => {
@@ -318,7 +304,7 @@ export default function InvoicesPage() {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Search Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
@@ -345,32 +331,29 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          {/* Date Start */}
+          {/* Date Range - Combined as single input */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Data de agendamento inicial
+              Agenda comissão
             </label>
-            <input
-              type="date"
-              value={invoiceDateStart}
-              onChange={handleDateStartChange}
-              className="w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          {/* Date End */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Data de agendamento final
-            </label>
-            <input
-              type="date"
-              value={invoiceDateEnd}
-              onChange={handleDateEndChange}
-              className="w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+            <div className="flex items-center gap-2 border rounded-md bg-background focus-within:ring-2 focus-within:ring-primary">
+              <input
+                type="date"
+                value={invoiceDateStart}
+                onChange={handleDateStartChange}
+                className="flex-1 px-3 py-2 border-0 rounded-l-md bg-transparent focus:outline-none focus:ring-0"
+                placeholder="Data inicial"
+              />
+              <span className="text-muted-foreground">até</span>
+              <input
+                type="date"
+                value={invoiceDateEnd}
+                onChange={handleDateEndChange}
+                className="flex-1 px-3 py-2 border-0 rounded-r-md bg-transparent focus:outline-none focus:ring-0"
+                placeholder="Data final"
+              />
+            </div>
           </div>
         </div>
 
@@ -438,26 +421,7 @@ export default function InvoicesPage() {
                 <tr>
                   <th className="text-left p-4 border-b font-medium">Número da NF</th>
                   <th className="text-left p-4 border-b font-medium">Data da NF</th>
-                  <th className="text-left p-4 border-b font-medium">
-                    <button
-                      onClick={handleSortToggle}
-                      className="flex items-center gap-2 hover:text-primary transition-colors"
-                    >
-                      <span>Data de Entrega</span>
-                      <div className="flex flex-col">
-                        <ArrowUp
-                          className={`h-3 w-3 ${
-                            sort === "asc" ? "text-primary" : "text-muted-foreground/30"
-                          }`}
-                        />
-                        <ArrowDown
-                          className={`h-3 w-3 -mt-1 ${
-                            sort === "desc" ? "text-primary" : "text-muted-foreground/30"
-                          }`}
-                        />
-                      </div>
-                    </button>
-                  </th>
+                  <th className="text-left p-4 border-b font-medium">Data de Entrega</th>
                   <th className="text-left p-4 border-b font-medium">Data de Pagamento</th>
                   <th className="text-left p-4 border-b font-medium">Data de Pagamento Comissão</th>
                   <th className="text-left p-4 border-b font-medium">Produto</th>
@@ -528,8 +492,8 @@ export default function InvoicesPage() {
             <span className="text-sm text-muted-foreground">
               Mostrando {page * limit + 1} - {Math.min((page + 1) * limit, totalInvoices)} de{" "}
               {totalInvoices} nota
-              {totalInvoices !== 1 ? "s" : ""} fiscal
-              {totalInvoices !== 1 ? "is" : ""}
+              {totalInvoices !== 1 ? "s" : ""} fisca
+              {totalInvoices !== 1 ? "is" : "l"}
             </span>
             <div className="flex items-center gap-2">
               <label htmlFor="limit-select" className="text-sm text-muted-foreground">

@@ -1,294 +1,377 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { AlertCircle } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "@/i18n/navigation";
-import CommissionVisualization from "./CommissionVisualization";
-import MissingDeliveryDatesVisualization from "./MissingDeliveryDatesVisualization";
-import type { SKUCommission, Order, DeliveryDate } from "@/types/commission";
-import { calculateCommissions } from "@/lib/commission-calculator";
-import type { ParsedOrderItem } from "@/lib/file-processors";
-
-const STORAGE_KEY = "sku_commissions";
+import { CommissionPeriodsService } from "@/lib/api";
+import type { CommissionPeriodResponse } from "@/lib/api";
+import { formatCurrency } from "@/lib/formatters";
+import { TrendingUp, Calendar, DollarSign, X } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 
 export default function CommissionDashboard() {
   const router = useRouter();
-  const [skuCommissions, setSkuCommissions] = useState<SKUCommission[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [deliveryDates, setDeliveryDates] = useState<DeliveryDate[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Load SKUs from localStorage on mount and listen for changes
-  useEffect(() => {
-    const loadSKUs = () => {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          const data = JSON.parse(stored);
-          setSkuCommissions(data);
-        } catch (error) {
-          console.error("Error loading SKUs from localStorage:", error);
-        }
-      }
-    };
+  // Fetch all commission periods
+  const {
+    data: periodsResponse,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["commissionPeriods"],
+    queryFn: async () => {
+      const response = await CommissionPeriodsService.getCommissionPeriodsV1CommissionPeriodsGet(
+        null,
+        null,
+        0,
+        100 // Get a large number to fetch all periods
+      );
+      return response;
+    },
+  });
 
-    // Load on mount
-    loadSKUs();
+  // Calculate current date and determine period categories
+  const {
+    currentPeriod,
+    lastPeriod,
+    futurePeriods,
+    chartData,
+    lastTotal,
+    currentTotal,
+    futureTotal,
+  } = useMemo(() => {
+    const periods: CommissionPeriodResponse[] =
+      periodsResponse?.success && periodsResponse?.data ? periodsResponse.data : [];
 
-    // Listen for storage events (when localStorage changes in other tabs/windows)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) {
-        loadSKUs();
-      }
-    };
+    const now = new Date();
 
-    window.addEventListener("storage", handleStorageChange);
+    // Sort all periods by date (oldest first)
+    const sortedPeriods = [...periods].sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      if (a.month !== b.month) return a.month - b.month;
+      return a.day - b.day;
+    });
 
-    // Also listen for custom events (for same-tab updates)
-    const handleCustomStorageChange = () => {
-      loadSKUs();
-    };
+    // Find current period: first period after today
+    const current = sortedPeriods.find((p) => {
+      const periodDate = new Date(p.year, p.month - 1, p.day);
+      return periodDate > now;
+    });
 
-    window.addEventListener("sku-commissions-updated", handleCustomStorageChange);
+    // Find last period: most recent period before or equal to today
+    const last = sortedPeriods
+      .filter((p) => {
+        const periodDate = new Date(p.year, p.month - 1, p.day);
+        return periodDate <= now;
+      })
+      .slice(-1)[0]; // Get the last one (most recent)
 
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("sku-commissions-updated", handleCustomStorageChange);
-    };
-  }, []);
-
-  // Calcula comissões sempre que os dados mudarem
-  const commissionItems = useMemo(() => {
-    if (skuCommissions.length === 0 || orders.length === 0 || deliveryDates.length === 0) {
-      return [];
+    // Find future periods (all periods after current)
+    const future: CommissionPeriodResponse[] = [];
+    if (current) {
+      const currentDate = new Date(current.year, current.month - 1, current.day);
+      future.push(
+        ...periods.filter((p) => {
+          const periodDate = new Date(p.year, p.month - 1, p.day);
+          return periodDate > currentDate;
+        })
+      );
+    } else {
+      // If no current period, all periods after today are future
+      future.push(
+        ...periods.filter((p) => {
+          const periodDate = new Date(p.year, p.month - 1, p.day);
+          return periodDate > now;
+        })
+      );
     }
-    try {
-      return calculateCommissions(orders, skuCommissions, deliveryDates);
-    } catch (error) {
-      console.error("Erro ao calcular comissões:", error);
-      return [];
-    }
-  }, [skuCommissions, orders, deliveryDates]);
 
-  // Load orders and delivery dates from mock JSON files on mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load orders
-        const ordersResponse = await fetch("/pedidos.json");
-        if (ordersResponse.ok) {
-          const ordersData = (await ordersResponse.json()) as Array<{
-            n_order: string;
-            dt_order: string;
-            customer: string;
-            cnpj: string;
-            address: string;
-            n_item: string;
-            code: string;
-            description: string;
-            package: string;
-            dt_in: string;
-            qty: number;
-            unit_value: number;
-            ipi: number;
-            icmsubs: number;
-            bcsubs: number;
-            disc_com: number;
-            disc_adi: number;
-            other: number;
-            weight_kg?: number;
-            weight?: number;
-          }>;
-          const parsedItems: ParsedOrderItem[] = ordersData.map((item) => ({
-            n_order: item.n_order,
-            dt_order: new Date(item.dt_order),
-            customer: item.customer,
-            cnpj: item.cnpj,
-            address: item.address,
-            n_item: item.n_item,
-            code: item.code,
-            description: item.description,
-            package: item.package,
-            dt_in: new Date(item.dt_in),
-            qty: item.qty,
-            unit_value: item.unit_value,
-            ipi: item.ipi,
-            icmsubs: item.icmsubs,
-            bcsubs: item.bcsubs,
-            disc_com: item.disc_com,
-            disc_adi: item.disc_adi,
-            other: item.other,
-            weight: item.weight_kg || item.weight || 0,
-          }));
+    // Calculate totals
+    const lastTotal = last ? last.total_commission : 0;
+    const currentTotal = current ? current.total_commission : 0;
+    const futureTotal = future.reduce((sum, p) => sum + p.total_commission, 0);
 
-          // Transform to orders
-          const orderMap = new Map<string, Order>();
-          parsedItems.forEach((item) => {
-            const orderId = item.n_order;
-            if (!orderMap.has(orderId)) {
-              orderMap.set(orderId, {
-                id: orderId,
-                date: item.dt_order,
-                items: [],
-                totalValue: 0,
-              });
-            }
-            const order = orderMap.get(orderId)!;
-            const totalValue = item.unit_value * item.qty;
-            order.items.push({
-              sku: item.code,
-              quantity: item.qty,
-              price: item.unit_value,
-              totalValue,
-            });
-            order.totalValue += totalValue;
-          });
+    // Format period labels
+    const monthNames = [
+      "Jan",
+      "Fev",
+      "Mar",
+      "Abr",
+      "Mai",
+      "Jun",
+      "Jul",
+      "Ago",
+      "Set",
+      "Out",
+      "Nov",
+      "Dez",
+    ];
 
-          setOrders(Array.from(orderMap.values()));
-        }
+    // Get all past periods (old periods)
+    const allPeriods = [...periods].sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      if (a.month !== b.month) return b.month - a.month;
+      return b.day - a.day;
+    });
 
-        // Load delivery dates
-        const deliveryResponse = await fetch("/delivery-dates.json");
-        if (deliveryResponse.ok) {
-          const deliveryData = (await deliveryResponse.json()) as Array<{
-            orderId: string;
-            sku: string;
-            expectedDeliveryDate: string;
-          }>;
-          const deliveryDates: DeliveryDate[] = deliveryData.map((item) => ({
-            orderId: item.orderId,
-            sku: item.sku,
-            expectedDeliveryDate: new Date(item.expectedDeliveryDate),
-          }));
-          setDeliveryDates(deliveryDates);
-        }
-      } catch (error) {
-        console.error("Error loading data:", error);
-      }
-    };
+    const pastPeriods = allPeriods.filter((p) => {
+      const periodDate = new Date(p.year, p.month - 1, p.day);
+      return periodDate <= now;
+    });
 
-    loadData();
-  }, []);
+    const last12Periods = pastPeriods.slice(0, 12).reverse(); // Reverse to show oldest first
 
-  // Validação de dados
-  // Nota: Itens sem data de entrega são mostrados na visualização MissingDeliveryDatesVisualization,
-  // não como erros
-  const validationErrors = useMemo(() => {
-    const errors: string[] = [];
+    // Get 3 immediate future periods
+    const immediateFuturePeriods = future.slice(0, 3);
 
-    if (orders.length > 0 && skuCommissions.length > 0) {
-      // Verifica se há SKUs nos pedidos sem configuração de comissão
-      const configuredSkus = new Set(skuCommissions.map((s) => s.sku));
-      const missingSkus = new Set<string>();
+    // Prepare chart data with color coding
+    const chartData: Array<{
+      period: CommissionPeriodResponse;
+      label: string;
+      value: number;
+      id: number;
+      type: "old" | "current" | "future";
+    }> = [];
 
-      orders.forEach((order) => {
-        order.items.forEach((item) => {
-          if (!configuredSkus.has(item.sku)) {
-            missingSkus.add(item.sku);
-          }
-        });
+    // Add old periods (last 12)
+    last12Periods.forEach((period) => {
+      const periodLabel = `${period.day}/${monthNames[period.month - 1]}/${period.year.toString().slice(-2)}`;
+      chartData.push({
+        period,
+        label: periodLabel,
+        value: period.total_commission,
+        id: period.id,
+        type: "old",
       });
+    });
 
-      missingSkus.forEach((sku) => {
-        errors.push(`SKU ${sku} não possui configuração de comissão`);
+    // Add current period (next period)
+    if (current) {
+      const periodLabel = `${current.day}/${monthNames[current.month - 1]}/${current.year.toString().slice(-2)}`;
+      chartData.push({
+        period: current,
+        label: periodLabel,
+        value: current.total_commission,
+        id: current.id,
+        type: "current",
       });
     }
 
-    return errors;
-  }, [orders, skuCommissions]);
+    // Add 3 immediate future periods
+    immediateFuturePeriods.forEach((period) => {
+      const periodLabel = `${period.day}/${monthNames[period.month - 1]}/${period.year.toString().slice(-2)}`;
+      chartData.push({
+        period,
+        label: periodLabel,
+        value: period.total_commission,
+        id: period.id,
+        type: "future",
+      });
+    });
 
-  const allErrors = validationErrors;
+    return {
+      currentPeriod: current,
+      lastPeriod: last,
+      futurePeriods: future,
+      chartData,
+      lastTotal,
+      currentTotal,
+      futureTotal,
+    };
+  }, [periodsResponse]);
+
+  // Handle toast auto-dismiss
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => {
+        setToastMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  const handlePeriodClick = (periodId: number, periodLabel: string) => {
+    setToastMessage(`Filtrando por período: ${periodLabel}`);
+    router.push(`/invoices?commission_period_id=${periodId}`);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="p-8 text-center text-muted-foreground">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-2" />
+          <p>Carregando dados...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="p-8 text-center text-red-600">
+          <p>Erro ao carregar dados. Tente novamente.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <div className="container mx-auto p-6 space-y-6">
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Dashboard de Comissões</h1>
-            <p className="text-muted-foreground">
-              Gerencie comissões de representantes de vendas por período
+        <h1 className="text-3xl font-bold mb-2">Dashboard de Comissões</h1>
+        <p className="text-muted-foreground">Visão geral das comissões por período</p>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Last Period */}
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              Último recebimento
+            </h3>
+            <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div className="space-y-1">
+            {lastPeriod && (
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                {lastPeriod.day}/{lastPeriod.month}/{lastPeriod.year}
+              </p>
+            )}
+            <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">
+              {formatCurrency(lastTotal)}
             </p>
           </div>
         </div>
-        {skuCommissions.length > 0 && (
-          <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
-            <span className="text-muted-foreground">
-              {skuCommissions.length} SKU{skuCommissions.length !== 1 ? "s" : ""} configurado
-              {skuCommissions.length !== 1 ? "s" : ""} •{" "}
-            </span>
-            <button
-              onClick={() => router.push("/sku-management")}
-              className="text-primary hover:underline"
+
+        {/* Current Period */}
+        <div className="bg-primary/10 border border-primary/30 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-primary">Próximo recebimento</h3>
+            <TrendingUp className="h-5 w-5 text-primary" />
+          </div>
+          <div className="space-y-1">
+            {currentPeriod && (
+              <p className="text-xs text-primary/80">
+                {currentPeriod.day}/{currentPeriod.month}/{currentPeriod.year}
+              </p>
+            )}
+            <p className="text-3xl font-bold text-primary">{formatCurrency(currentTotal)}</p>
+          </div>
+        </div>
+
+        {/* Future Periods */}
+        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+              Recebimentos futuros
+            </h3>
+            <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-emerald-600 dark:text-emerald-400">
+              {futurePeriods.length} período{futurePeriods.length !== 1 ? "s" : ""}
+            </p>
+            <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">
+              {formatCurrency(futureTotal)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bar Chart */}
+      <div className="bg-card border rounded-lg p-6">
+        <h3 className="text-lg font-semibold mb-6">Comissões</h3>
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+            <XAxis
+              dataKey="label"
+              angle={-45}
+              textAnchor="end"
+              height={80}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+            />
+            <YAxis
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+              tickFormatter={(value) => formatCurrency(value)}
+            />
+            <Tooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <div className="bg-card border rounded-lg p-3 shadow-lg">
+                      <p className="font-medium mb-1">{data.label}</p>
+                      <p className="text-sm text-primary">{formatCurrency(data.value)}</p>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+            <Bar
+              dataKey="value"
+              onClick={(data, index) => {
+                if (data && index !== undefined && chartData[index]) {
+                  const chartItem = chartData[index];
+                  handlePeriodClick(chartItem.id, chartItem.label);
+                }
+              }}
+              style={{ cursor: "pointer" }}
             >
-              Editar configurações
-            </button>
+              {chartData.map((entry, index) => {
+                let color: string;
+                if (entry.type === "old") {
+                  color = "#3b82f6"; // Blue for old periods
+                } else if (entry.type === "current") {
+                  color = "hsl(var(--primary))"; // Primary color for current
+                } else {
+                  color = "#10b981"; // Emerald green for future periods
+                }
+                return <Cell key={`cell-${index}`} fill={color} />;
+              })}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+        <div className="flex items-center justify-center gap-6 mt-4 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: "#3b82f6" }} />
+            <span className="text-muted-foreground">Períodos anteriores</span>
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-primary" />
+            <span className="text-muted-foreground">Próximo recebimento</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: "#10b981" }} />
+            <span className="text-muted-foreground">Recebimentos futuros</span>
+          </div>
+        </div>
       </div>
 
-      {/* Alertas de erro */}
-      {allErrors.length > 0 && (
-        <div className="border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <h3 className="font-semibold text-red-800 dark:text-red-200">Avisos e Erros</h3>
-          </div>
-          <ul className="list-disc list-inside space-y-1 text-sm text-red-700 dark:text-red-300">
-            {allErrors.map((error, index) => (
-              <li key={index}>{error}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Info message */}
-      <div className="border rounded-lg p-4 bg-muted/30">
-        <p className="text-sm text-muted-foreground">
-          Os dados são carregados automaticamente dos arquivos mock. Para fazer upload de novos
-          arquivos, acesse a seção{" "}
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 bg-card border border-primary/20 rounded-lg shadow-lg p-4 flex items-center gap-3 z-50 transition-all duration-300">
+          <p className="text-sm">{toastMessage}</p>
           <button
-            onClick={() => router.push("/file-batches")}
-            className="text-primary hover:underline"
+            onClick={() => setToastMessage(null)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Fechar notificação"
           >
-            Arquivos
+            <X className="h-4 w-4" />
           </button>
-          .
-        </p>
-      </div>
-
-      {/* Visualização de itens sem data de entrega */}
-      {orders.length > 0 && (
-        <MissingDeliveryDatesVisualization
-          orders={orders}
-          deliveryDates={deliveryDates}
-          skuCommissions={skuCommissions}
-        />
-      )}
-
-      {/* Visualização de comissões */}
-      {commissionItems.length > 0 && (
-        <div className="border rounded-lg p-6">
-          <CommissionVisualization commissionItems={commissionItems} />
-        </div>
-      )}
-
-      {/* Mensagem quando não há dados */}
-      {commissionItems.length === 0 && (
-        <div className="border rounded-lg p-12 text-center">
-          <p className="text-muted-foreground mb-4">
-            Os dados são carregados automaticamente. Se não houver comissões, verifique se os
-            arquivos mock estão disponíveis.
-          </p>
-          {skuCommissions.length === 0 && (
-            <p className="text-sm text-muted-foreground mt-4">
-              Configure os SKUs em{" "}
-              <button
-                onClick={() => router.push("/sku-management")}
-                className="text-primary hover:underline"
-              >
-                Gerenciamento de SKUs
-              </button>
-            </p>
-          )}
         </div>
       )}
     </div>

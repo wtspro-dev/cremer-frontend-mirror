@@ -7,6 +7,7 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export type { ApiResponse_CommissionPeriodResponse__ApiResponseError_ } from './models/ApiResponse_CommissionPeriodResponse__ApiResponseError_';
 export type { ApiResponse_HealthCheckResponse__ApiResponseError_ } from './models/ApiResponse_HealthCheckResponse__ApiResponseError_';
 export type { ApiResponse_InvoiceDetailResponse__ApiResponseError_ } from './models/ApiResponse_InvoiceDetailResponse__ApiResponseError_';
 export type { ApiResponse_OrderDetailResponse__ApiResponseError_ } from './models/ApiResponse_OrderDetailResponse__ApiResponseError_';

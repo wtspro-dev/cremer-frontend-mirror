@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ApiResponse_CommissionPeriodResponse__ApiResponseError_ } from '../models/ApiResponse_CommissionPeriodResponse__ApiResponseError_';
 import type { PaginatedApiResponse_list_CommissionPeriodResponse___ApiResponseError_ } from '../models/PaginatedApiResponse_list_CommissionPeriodResponse___ApiResponseError_';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -30,6 +31,26 @@ export class CommissionPeriodsService {
                 'end_date': endDate,
                 'page': page,
                 'limit': limit,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get Commission Period
+     * @param periodId
+     * @returns ApiResponse_CommissionPeriodResponse__ApiResponseError_ Successful Response
+     * @throws ApiError
+     */
+    public static getCommissionPeriodV1CommissionPeriodsPeriodIdGet(
+        periodId: number,
+    ): CancelablePromise<ApiResponse_CommissionPeriodResponse__ApiResponseError_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/v1/commission-periods/{period_id}',
+            path: {
+                'period_id': periodId,
             },
             errors: {
                 422: `Validation Error`,

@@ -14,8 +14,13 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
-import { InvoicesService } from "@/lib/api";
-import type { InvoiceResponse, InvoiceBatchResponse } from "@/lib/api";
+import { InvoicesService, OrdersService, CommissionPeriodsService } from "@/lib/api";
+import type {
+  InvoiceResponse,
+  InvoiceBatchResponse,
+  OrderDetailResponse,
+  CommissionPeriodResponse,
+} from "@/lib/api";
 import OrderDetailModal from "./OrderDetailModal";
 import { formatDate, formatCurrency, formatPercentage } from "@/lib/formatters";
 
@@ -110,6 +115,39 @@ export default function InvoicesPage() {
   const currentBatch: InvoiceBatchResponse | undefined =
     batchId && batchesResponse?.success && batchesResponse?.data
       ? batchesResponse.data.find((batch) => batch.id === batchId)
+      : undefined;
+
+  // Fetch order to get order number
+  const { data: orderResponse } = useQuery({
+    queryKey: ["order", orderId],
+    queryFn: async () => {
+      if (!orderId) return null;
+      const response = await OrdersService.getOrderV1OrdersOrderIdGet(orderId);
+      return response;
+    },
+    enabled: !!orderId, // Only fetch if orderId is set
+  });
+
+  const currentOrder: OrderDetailResponse | undefined =
+    orderId && orderResponse?.success && orderResponse?.data ? orderResponse.data : undefined;
+
+  // Fetch commission period to get period details
+  const { data: periodResponse } = useQuery({
+    queryKey: ["commissionPeriod", commissionPeriodId],
+    queryFn: async () => {
+      if (!commissionPeriodId) return null;
+      const response =
+        await CommissionPeriodsService.getCommissionPeriodV1CommissionPeriodsPeriodIdGet(
+          commissionPeriodId
+        );
+      return response;
+    },
+    enabled: !!commissionPeriodId, // Only fetch if commissionPeriodId is set
+  });
+
+  const currentPeriod: CommissionPeriodResponse | undefined =
+    commissionPeriodId && periodResponse?.success && periodResponse?.data
+      ? periodResponse.data
       : undefined;
 
   // Reset to first page when filters change
@@ -220,11 +258,13 @@ export default function InvoicesPage() {
       {/* Filters */}
       <div className="bg-card border rounded-lg p-4 space-y-4">
         {/* Batch, Order, and Commission Period Badges */}
-        {(batchId && currentBatch) || orderId || commissionPeriodId ? (
+        {(batchId && currentBatch) ||
+        (orderId && currentOrder) ||
+        (commissionPeriodId && currentPeriod) ? (
           <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-muted-foreground">Filtrado por:</span>
             {batchId && currentBatch && (
               <>
-                <span className="text-sm text-muted-foreground">Filtrado por:</span>
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-md border border-primary/20">
                   <span className="text-sm font-medium">Lote: {currentBatch.name}</span>
                   <button
@@ -237,9 +277,9 @@ export default function InvoicesPage() {
                 </div>
               </>
             )}
-            {orderId && (
+            {orderId && currentOrder && (
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-md border border-primary/20">
-                <span className="text-sm font-medium">Pedido: {orderId}</span>
+                <span className="text-sm font-medium">Pedido: {currentOrder.order_number}</span>
                 <button
                   onClick={handleClearOrderFilter}
                   className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
@@ -249,9 +289,11 @@ export default function InvoicesPage() {
                 </button>
               </div>
             )}
-            {commissionPeriodId && (
+            {commissionPeriodId && currentPeriod && (
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-md border border-primary/20">
-                <span className="text-sm font-medium">Período: {commissionPeriodId}</span>
+                <span className="text-sm font-medium">
+                  Período: {currentPeriod.day}/{currentPeriod.month}/{currentPeriod.year}
+                </span>
                 <button
                   onClick={handleClearCommissionPeriodFilter}
                   className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"

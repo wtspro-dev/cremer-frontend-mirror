@@ -433,7 +433,9 @@ export default function CommissionDashboard() {
               onClick={handleFullyBilledClick}
               className="cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-950/30 rounded-md p-2 -m-2 transition-colors"
             >
-              <p className="text-xs text-purple-600 dark:text-purple-400">Totalmente faturados</p>
+              <p className="text-xs text-purple-600 dark:text-purple-400">
+                Pedidos totalmente faturados
+              </p>
               <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
                 {fullyBilledCount}
               </p>
@@ -443,9 +445,7 @@ export default function CommissionDashboard() {
                 onClick={handleNotFullyBilledClick}
                 className="cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-950/30 rounded-md p-2 -m-2 transition-colors"
               >
-                <p className="text-xs text-purple-600 dark:text-purple-400">
-                  Não totalmente faturados
-                </p>
+                <p className="text-xs text-purple-600 dark:text-purple-400">Pedidos com saldo</p>
                 <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
                   {notFullyBilledCount}
                 </p>

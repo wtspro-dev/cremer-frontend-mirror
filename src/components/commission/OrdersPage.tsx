@@ -169,7 +169,7 @@ export default function OrdersPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Search Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
@@ -196,32 +196,29 @@ export default function OrdersPage() {
             </div>
           </div>
 
-          {/* Date Start */}
+          {/* Date Range - Combined as single input */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Data Inicial
+              Data do pedido
             </label>
-            <input
-              type="date"
-              value={orderDateStart}
-              onChange={handleDateStartChange}
-              className="w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          {/* Date End */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Data Final
-            </label>
-            <input
-              type="date"
-              value={orderDateEnd}
-              onChange={handleDateEndChange}
-              className="w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+            <div className="flex items-center gap-2 border rounded-md bg-background focus-within:ring-2 focus-within:ring-primary">
+              <input
+                type="date"
+                value={orderDateStart}
+                onChange={handleDateStartChange}
+                className="flex-1 px-3 py-2 border-0 rounded-l-md bg-transparent focus:outline-none focus:ring-0"
+                placeholder="Data inicial"
+              />
+              <span className="text-muted-foreground">até</span>
+              <input
+                type="date"
+                value={orderDateEnd}
+                onChange={handleDateEndChange}
+                className="flex-1 px-3 py-2 border-0 rounded-r-md bg-transparent focus:outline-none focus:ring-0"
+                placeholder="Data final"
+              />
+            </div>
           </div>
         </div>
 
@@ -260,7 +257,7 @@ export default function OrdersPage() {
                 onChange={() => handleBillingStatusChange(OrderBillingStatus.NOT_FULLY_BILLED)}
                 className="h-4 w-4 text-primary focus:ring-primary"
               />
-              <span className="text-sm">Não totalmente faturados</span>
+              <span className="text-sm">Saldo</span>
             </label>
           </div>
         </div>

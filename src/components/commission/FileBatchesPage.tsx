@@ -10,10 +10,6 @@ import { ParsedOrderItem } from "@/lib/file-processors";
 import { OrdersService, InvoicesService } from "@/lib/api";
 import type { OrderBatchResponse, InvoiceBatchResponse } from "@/lib/api";
 
-const STORAGE_KEYS = {
-  deliveryDates: "uploaded_delivery_dates",
-};
-
 interface UploadedFile {
   id: string;
   name: string;
@@ -26,7 +22,6 @@ interface UploadedFile {
 
 export default function FileBatchesPage() {
   const [activeTab, setActiveTab] = useState<"orders" | "invoices">("orders");
-  const [deliveryDatesFiles, setDeliveryDatesFiles] = useState<UploadedFile[]>([]);
   const router = useRouter();
   const [search, setSearch] = useState<string>("");
   const [page, setPage] = useState<number>(0);
@@ -103,29 +98,6 @@ export default function FileBatchesPage() {
   const totalInvoiceBatches = invoiceBatchesResponse?.total ?? 0;
   const totalInvoicePages = Math.ceil(totalInvoiceBatches / limit);
 
-  // Load delivery dates files from localStorage on mount
-  useEffect(() => {
-    const loadDeliveryDatesFiles = () => {
-      const storedDeliveryDates = localStorage.getItem(STORAGE_KEYS.deliveryDates);
-      if (storedDeliveryDates) {
-        try {
-          const files = JSON.parse(storedDeliveryDates) as Array<
-            Omit<UploadedFile, "uploadedAt"> & { uploadedAt: string }
-          >;
-          setDeliveryDatesFiles(
-            files.map((f) => ({
-              ...f,
-              uploadedAt: new Date(f.uploadedAt),
-            }))
-          );
-        } catch (error) {
-          console.error("Error loading delivery dates files:", error);
-        }
-      }
-    };
-    loadDeliveryDatesFiles();
-  }, []);
-
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleOrdersLoaded = (_data: Order[], _parsedItems?: ParsedOrderItem[], _file?: File) => {
     // After upload, refetch batches from API
@@ -167,22 +139,6 @@ export default function FileBatchesPage() {
     } else {
       // Redirect to invoices page with batch_id
       router.push(`/invoices?batch_id=${file.id}`);
-    }
-  };
-
-  const handleDeleteFile = (id: string, type: "orders" | "invoices") => {
-    if (type === "orders") {
-      // TODO: Implement API call to delete batch if endpoint exists
-      // For now, just refetch to get updated list
-      refetchBatches();
-    } else if (type === "invoices") {
-      // TODO: Implement API call to delete batch if endpoint exists
-      // For now, just refetch to get updated list
-      refetchInvoiceBatches();
-    } else {
-      const updated = deliveryDatesFiles.filter((f) => f.id !== id);
-      setDeliveryDatesFiles(updated);
-      localStorage.setItem(STORAGE_KEYS.deliveryDates, JSON.stringify(updated));
     }
   };
 
@@ -321,12 +277,6 @@ export default function FileBatchesPage() {
                                   >
                                     <ExternalLink className="h-4 w-4" />
                                     <span>Ver pedidos</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteFile(file.id, "orders")}
-                                    className="px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors text-sm"
-                                  >
-                                    Excluir
                                   </button>
                                 </div>
                               </td>
@@ -518,12 +468,6 @@ export default function FileBatchesPage() {
                                   >
                                     <ExternalLink className="h-4 w-4" />
                                     <span>Ver notas fiscais</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteFile(file.id, "invoices")}
-                                    className="px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors text-sm"
-                                  >
-                                    Excluir
                                   </button>
                                 </div>
                               </td>

@@ -142,6 +142,7 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                     <tr>
                       <th className="text-left p-3 border-b font-medium">Número da Nota</th>
                       <th className="text-left p-3 border-b font-medium">Data da Nota</th>
+                      <th className="text-left p-3 border-b font-medium">Data de entrega</th>
                       <th className="text-left p-3 border-b font-medium">Data de Pagamento</th>
                       <th className="text-left p-3 border-b font-medium">
                         Data de Pagamento da Comissão
@@ -171,6 +172,9 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                         >
                           <td className="p-3 font-medium">{invoice.invoice_number}</td>
                           <td className="p-3">{formatDate(invoice.invoice_date)}</td>
+                          <td className="p-3">
+                            {invoice.delivery_date ? formatDate(invoice.delivery_date) : "-"}
+                          </td>
                           <td className="p-3">
                             {invoice.payment_date ? formatDate(invoice.payment_date) : "-"}
                           </td>

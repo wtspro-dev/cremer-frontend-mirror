@@ -36,7 +36,7 @@ export default function InvoicesPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [sort, setSort] = useState<string>("desc");
-  const [excludeNullDeliveryDate, setExcludeNullDeliveryDate] = useState<boolean>(false);
+  const [scheduleFilter, setScheduleFilter] = useState<"all" | "scheduled" | "unscheduled">("all");
   const [page, setPage] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
 
@@ -161,7 +161,7 @@ export default function InvoicesPage() {
     invoiceDateStart,
     invoiceDateEnd,
     sort,
-    excludeNullDeliveryDate,
+    scheduleFilter,
   ]);
 
   // Fetch invoices from API
@@ -178,12 +178,24 @@ export default function InvoicesPage() {
       search,
       invoiceDateStart,
       invoiceDateEnd,
-      excludeNullDeliveryDate,
+      scheduleFilter,
       sort,
       page,
       limit,
     ],
     queryFn: async () => {
+      // If filtering for unscheduled invoices, use the dedicated endpoint
+      if (scheduleFilter === "unscheduled") {
+        const response = await InvoicesService.getNotScheduledInvoicesV1InvoicesNotScheduledGet(
+          search || null,
+          page,
+          limit
+        );
+        return response;
+      }
+
+      // For "all" or "scheduled", use the main endpoint
+      const excludeNullDeliveryDate = scheduleFilter === "scheduled";
       const response = await InvoicesService.getInvoicesV1InvoicesGet(
         batchId,
         orderId,
@@ -235,8 +247,8 @@ export default function InvoicesPage() {
     setSort(sort === "desc" ? "asc" : "desc");
   };
 
-  const handleExcludeNullDeliveryDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setExcludeNullDeliveryDate(e.target.checked);
+  const handleScheduleFilterChange = (value: "all" | "scheduled" | "unscheduled") => {
+    setScheduleFilter(value);
   };
 
   const handleViewOrder = (orderId: number) => {
@@ -337,7 +349,7 @@ export default function InvoicesPage() {
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Data entrega inicial
+              Data de agendamento inicial
             </label>
             <input
               type="date"
@@ -351,7 +363,7 @@ export default function InvoicesPage() {
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Data entrega final
+              Data de agendamento final
             </label>
             <input
               type="date"
@@ -362,21 +374,44 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        {/* Exclude Null Delivery Date Checkbox */}
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="exclude-null-delivery-date"
-            checked={excludeNullDeliveryDate}
-            onChange={handleExcludeNullDeliveryDateChange}
-            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-          />
-          <label
-            htmlFor="exclude-null-delivery-date"
-            className="text-sm font-medium cursor-pointer"
-          >
-            Excluir notas fiscais sem data de entrega
-          </label>
+        {/* Schedule Filter Radio Buttons */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Filtrar por agendamento:</label>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="schedule-filter"
+                value="all"
+                checked={scheduleFilter === "all"}
+                onChange={() => handleScheduleFilterChange("all")}
+                className="h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm">Todas</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="schedule-filter"
+                value="scheduled"
+                checked={scheduleFilter === "scheduled"}
+                onChange={() => handleScheduleFilterChange("scheduled")}
+                className="h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm">Agendadas</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="schedule-filter"
+                value="unscheduled"
+                checked={scheduleFilter === "unscheduled"}
+                onChange={() => handleScheduleFilterChange("unscheduled")}
+                className="h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm">Sem agendamento</span>
+            </label>
+          </div>
         </div>
       </div>
 

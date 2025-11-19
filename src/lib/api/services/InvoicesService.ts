@@ -104,6 +104,32 @@ export class InvoicesService {
         });
     }
     /**
+     * Get Not Scheduled Invoices
+     * @param search Search string to match against invoice_number, customer_cnpj, product_code, or order_number
+     * @param page Page number (0-indexed)
+     * @param limit Number of items per page
+     * @returns PaginatedApiResponse_list_InvoiceResponse___ApiResponseError_ Successful Response
+     * @throws ApiError
+     */
+    public static getNotScheduledInvoicesV1InvoicesNotScheduledGet(
+        search?: (string | null),
+        page?: number,
+        limit: number = 25,
+    ): CancelablePromise<PaginatedApiResponse_list_InvoiceResponse___ApiResponseError_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/v1/invoices/not-scheduled',
+            query: {
+                'search': search,
+                'page': page,
+                'limit': limit,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * Get Invoice
      * @param invoiceId
      * @returns ApiResponse_InvoiceDetailResponse__ApiResponseError_ Successful Response

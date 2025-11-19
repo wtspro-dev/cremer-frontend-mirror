@@ -3,10 +3,10 @@
 import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "@/i18n/navigation";
-import { CommissionPeriodsService } from "@/lib/api";
+import { CommissionPeriodsService, InvoicesService } from "@/lib/api";
 import type { CommissionPeriodResponse } from "@/lib/api";
 import { formatCurrency } from "@/lib/formatters";
-import { TrendingUp, Calendar, DollarSign, X } from "lucide-react";
+import { TrendingUp, Calendar, DollarSign, X, AlertCircle } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -39,6 +39,30 @@ export default function CommissionDashboard() {
       return response;
     },
   });
+
+  // Fetch unscheduled invoices
+  const { data: unscheduledInvoicesResponse } = useQuery({
+    queryKey: ["unscheduledInvoices"],
+    queryFn: async () => {
+      const response = await InvoicesService.getNotScheduledInvoicesV1InvoicesNotScheduledGet(
+        null,
+        0,
+        100 // Get a large number to calculate total
+      );
+      return response;
+    },
+  });
+
+  // Calculate total commission value of unscheduled invoices
+  const unscheduledTotal = useMemo(() => {
+    if (unscheduledInvoicesResponse?.success && unscheduledInvoicesResponse?.data) {
+      return unscheduledInvoicesResponse.data.reduce(
+        (sum, invoice) => sum + invoice.commission_value,
+        0
+      );
+    }
+    return 0;
+  }, [unscheduledInvoicesResponse]);
 
   // Calculate current date and determine period categories
   const {
@@ -234,7 +258,7 @@ export default function CommissionDashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Last Period */}
         <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
@@ -285,6 +309,24 @@ export default function CommissionDashboard() {
             </p>
             <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">
               {formatCurrency(futureTotal)}
+            </p>
+          </div>
+        </div>
+
+        {/* Unscheduled Invoices */}
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-red-700 dark:text-red-300">Sem agendamento</h3>
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-red-600 dark:text-red-400">
+              {unscheduledInvoicesResponse?.success && unscheduledInvoicesResponse?.data
+                ? `${unscheduledInvoicesResponse.data.length} nota${unscheduledInvoicesResponse.data.length !== 1 ? "s" : ""} fiscal${unscheduledInvoicesResponse.data.length !== 1 ? "is" : ""}`
+                : "0 nota fiscal"}
+            </p>
+            <p className="text-3xl font-bold text-red-700 dark:text-red-300">
+              {formatCurrency(unscheduledTotal)}
             </p>
           </div>
         </div>

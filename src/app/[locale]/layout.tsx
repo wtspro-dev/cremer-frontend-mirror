@@ -3,10 +3,12 @@ import "../globals.css";
 import QueryProvider from "@/providers/query-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ApiProvider } from "@/providers/api-provider";
+import { GoogleOAuthProviderWrapper } from "@/providers/google-oauth-provider";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { routing } from "@/i18n/routing";
 import { notFound } from "next/navigation";
-import MainLayout from "@/components/layout/MainLayout";
+import ConditionalLayout from "@/components/layout/ConditionalLayout";
 
 export const metadata: Metadata = {
   title: "Dashboard de Comissão de Vendas",
@@ -27,20 +29,24 @@ export default async function RootLayout({
   return (
     <html suppressHydrationWarning>
       <body>
-        <ApiProvider>
-          <QueryProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="light"
-              enableSystem
-              disableTransitionOnChange
-            >
-              <NextIntlClientProvider>
-                <MainLayout>{children}</MainLayout>
-              </NextIntlClientProvider>
-            </ThemeProvider>
-          </QueryProvider>
-        </ApiProvider>
+        <NextIntlClientProvider>
+          <AuthGuard>
+            <ApiProvider>
+              <QueryProvider>
+                <GoogleOAuthProviderWrapper>
+                  <ThemeProvider
+                    attribute="class"
+                    defaultTheme="light"
+                    enableSystem
+                    disableTransitionOnChange
+                  >
+                    <ConditionalLayout>{children}</ConditionalLayout>
+                  </ThemeProvider>
+                </GoogleOAuthProviderWrapper>
+              </QueryProvider>
+            </ApiProvider>
+          </AuthGuard>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

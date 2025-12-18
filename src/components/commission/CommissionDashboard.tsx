@@ -25,11 +25,7 @@ export default function CommissionDashboard() {
   const router = useRouter();
 
   // Fetch all commission periods
-  const {
-    data: periodsResponse,
-    isLoading,
-    error,
-  } = useCommissionPeriods(null, null, 0, 100);
+  const { data: periodsResponse, isLoading, error } = useCommissionPeriods(null, null, 0, 100);
 
   // Fetch unscheduled invoices
   const { data: unscheduledInvoicesResponse } = useInvoices(

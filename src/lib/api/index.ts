@@ -8,6 +8,8 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { ApiResponse_CommissionPeriodResponse__ApiResponseError_ } from './models/ApiResponse_CommissionPeriodResponse__ApiResponseError_';
+export type { ApiResponse_dict__ApiResponseError_ } from './models/ApiResponse_dict__ApiResponseError_';
+export type { ApiResponse_GoogleAuthResponse__ApiResponseError_ } from './models/ApiResponse_GoogleAuthResponse__ApiResponseError_';
 export type { ApiResponse_HealthCheckResponse__ApiResponseError_ } from './models/ApiResponse_HealthCheckResponse__ApiResponseError_';
 export type { ApiResponse_InvoiceDetailResponse__ApiResponseError_ } from './models/ApiResponse_InvoiceDetailResponse__ApiResponseError_';
 export type { ApiResponse_OrderDetailResponse__ApiResponseError_ } from './models/ApiResponse_OrderDetailResponse__ApiResponseError_';
@@ -19,6 +21,8 @@ export type { Body_upload_invoices_v1_invoices_upload_post } from './models/Body
 export type { Body_upload_orders_v1_orders_upload_post } from './models/Body_upload_orders_v1_orders_upload_post';
 export type { CommissionPeriodResponse } from './models/CommissionPeriodResponse';
 export type { CreateSkuRequest } from './models/CreateSkuRequest';
+export type { GoogleAuth } from './models/GoogleAuth';
+export type { GoogleAuthResponse } from './models/GoogleAuthResponse';
 export type { HealthCheckResponse } from './models/HealthCheckResponse';
 export type { HTTPValidationError } from './models/HTTPValidationError';
 export type { InvoiceBatchResponse } from './models/InvoiceBatchResponse';
@@ -43,6 +47,7 @@ export type { UploadInvoicesResponse } from './models/UploadInvoicesResponse';
 export type { UploadOrdersResponse } from './models/UploadOrdersResponse';
 export type { ValidationError } from './models/ValidationError';
 
+export { AuthService } from './services/AuthService';
 export { CommissionPeriodsService } from './services/CommissionPeriodsService';
 export { HealthCheckService } from './services/HealthCheckService';
 export { InvoicesService } from './services/InvoicesService';

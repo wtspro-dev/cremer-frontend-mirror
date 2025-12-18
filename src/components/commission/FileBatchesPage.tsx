@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { FileText, ExternalLink, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import FileUpload from "./FileUpload";
 import type { Order, DeliveryDate } from "@/types/commission";
 import { ParsedOrderItem } from "@/lib/file-processors";
-import { OrdersService, InvoicesService } from "@/lib/api";
 import type { OrderBatchResponse, InvoiceBatchResponse } from "@/lib/api";
+import { useOrderBatches } from "@/hooks/use-orders";
+import { useInvoiceBatches } from "@/hooks/use-invoices";
 
 interface UploadedFile {
   id: string;
@@ -38,17 +38,7 @@ export default function FileBatchesPage() {
     isLoading: isLoadingBatches,
     error: batchesError,
     refetch: refetchBatches,
-  } = useQuery({
-    queryKey: ["orderBatches", search, page, limit],
-    queryFn: async () => {
-      const response = await OrdersService.getOrderBatchesV1OrdersBatchesGet(
-        search || null,
-        page,
-        limit
-      );
-      return response;
-    },
-  });
+  } = useOrderBatches(search || null, page, limit);
 
   // Fetch invoice batches from API
   const {
@@ -56,17 +46,7 @@ export default function FileBatchesPage() {
     isLoading: isLoadingInvoiceBatches,
     error: invoiceBatchesError,
     refetch: refetchInvoiceBatches,
-  } = useQuery({
-    queryKey: ["invoiceBatches", search, page, limit],
-    queryFn: async () => {
-      const response = await InvoicesService.getInvoiceBatchesV1InvoicesBatchesGet(
-        search || null,
-        page,
-        limit
-      );
-      return response;
-    },
-  });
+  } = useInvoiceBatches(search || null, page, limit);
 
   // Transform API response to UploadedFile format
   const ordersFiles: UploadedFile[] =

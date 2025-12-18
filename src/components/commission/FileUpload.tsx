@@ -5,7 +5,8 @@ import { Upload, File, CheckCircle2, AlertCircle } from "lucide-react";
 import type { FileUploadType } from "@/types/commission";
 import { processSKUConfigFile, type ParsedOrderItem } from "@/lib/file-processors";
 import type { SKUCommission, Order, DeliveryDate } from "@/types/commission";
-import { OrdersService, InvoicesService } from "@/lib/api";
+import { useUploadOrders } from "@/hooks/use-orders";
+import { useUploadInvoices } from "@/hooks/use-invoices";
 
 interface FileUploadProps {
   type: FileUploadType;
@@ -43,6 +44,9 @@ export default function FileUpload({
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadOrdersMutation = useUploadOrders();
+  const uploadInvoicesMutation = useUploadInvoices();
 
   const config = fileTypeLabels[type];
 
@@ -105,44 +109,41 @@ export default function FileUpload({
     setStatus("idle");
     setErrorMessage("");
 
-    let uploadSuccess = false;
+    const formData = {
+      files: uploadedFiles,
+    };
 
-    try {
-      const formData = {
-        files: uploadedFiles,
-      };
-
-      const response = await OrdersService.uploadOrdersV1OrdersUploadPost(formData);
-
-      if (response.success && response.data) {
-        uploadSuccess = true;
-        setStatus("success");
-        onOrdersLoaded?.([], undefined, undefined);
-        setUploadedFiles([]);
-      } else {
-        const errorMsg = "Erro ao fazer upload do arquivo";
+    uploadOrdersMutation.mutate(formData, {
+      onSuccess: (response) => {
+        if (response.success && response.data) {
+          setStatus("success");
+          onOrdersLoaded?.([], undefined, undefined);
+          setUploadedFiles([]);
+          clearInput();
+          setTimeout(() => {
+            setStatus("idle");
+            setErrorMessage("");
+          }, 2000);
+        } else {
+          const errorMsg = "Erro ao fazer upload do arquivo";
+          setErrorMessage(errorMsg);
+          setStatus("error");
+          onError?.(errorMsg);
+        }
+        setIsProcessing(false);
+      },
+      onError: (error: Error) => {
+        const errorMsg =
+          error instanceof Error
+            ? error.message
+            : "Erro ao fazer upload do arquivo. Tente novamente.";
         setErrorMessage(errorMsg);
         setStatus("error");
         onError?.(errorMsg);
-      }
-    } catch (apiError: unknown) {
-      const errorMsg =
-        apiError instanceof Error
-          ? apiError.message
-          : "Erro ao fazer upload do arquivo. Tente novamente.";
-      setErrorMessage(errorMsg);
-      setStatus("error");
-      onError?.(errorMsg);
-    } finally {
-      setIsProcessing(false);
-      clearInput();
-      if (uploadSuccess) {
-        setTimeout(() => {
-          setStatus("idle");
-          setErrorMessage("");
-        }, 2000);
-      }
-    }
+        setIsProcessing(false);
+        clearInput();
+      },
+    });
   };
 
   const handleConfirmInvoicesUpload = async () => {
@@ -152,44 +153,41 @@ export default function FileUpload({
     setStatus("idle");
     setErrorMessage("");
 
-    let uploadSuccess = false;
+    const formData = {
+      files: uploadedFiles,
+    };
 
-    try {
-      const formData = {
-        files: uploadedFiles,
-      };
-
-      const response = await InvoicesService.uploadInvoicesV1InvoicesUploadPost(formData);
-
-      if (response.success && response.data) {
-        uploadSuccess = true;
-        setStatus("success");
-        onDeliveryDatesLoaded?.([], undefined);
-        setUploadedFiles([]);
-      } else {
-        const errorMsg = "Erro ao fazer upload do arquivo";
+    uploadInvoicesMutation.mutate(formData, {
+      onSuccess: (response) => {
+        if (response.success && response.data) {
+          setStatus("success");
+          onDeliveryDatesLoaded?.([], undefined);
+          setUploadedFiles([]);
+          clearInput();
+          setTimeout(() => {
+            setStatus("idle");
+            setErrorMessage("");
+          }, 2000);
+        } else {
+          const errorMsg = "Erro ao fazer upload do arquivo";
+          setErrorMessage(errorMsg);
+          setStatus("error");
+          onError?.(errorMsg);
+        }
+        setIsProcessing(false);
+      },
+      onError: (error: Error) => {
+        const errorMsg =
+          error instanceof Error
+            ? error.message
+            : "Erro ao fazer upload do arquivo. Tente novamente.";
         setErrorMessage(errorMsg);
         setStatus("error");
         onError?.(errorMsg);
-      }
-    } catch (apiError: unknown) {
-      const errorMsg =
-        apiError instanceof Error
-          ? apiError.message
-          : "Erro ao fazer upload do arquivo. Tente novamente.";
-      setErrorMessage(errorMsg);
-      setStatus("error");
-      onError?.(errorMsg);
-    } finally {
-      setIsProcessing(false);
-      clearInput();
-      if (uploadSuccess) {
-        setTimeout(() => {
-          setStatus("idle");
-          setErrorMessage("");
-        }, 2000);
-      }
-    }
+        setIsProcessing(false);
+        clearInput();
+      },
+    });
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -257,7 +255,7 @@ export default function FileUpload({
           </label>
         </div>
       ) : type === "orders-pdf" || type === "invoices-excel" ? (
-        isProcessing ? (
+        isProcessing || uploadOrdersMutation.isPending || uploadInvoicesMutation.isPending ? (
           <div className="border rounded-lg p-6 text-center flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
             <p className="text-sm text-muted-foreground">

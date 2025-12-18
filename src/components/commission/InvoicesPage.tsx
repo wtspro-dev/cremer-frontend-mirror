@@ -1,18 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { Search, Calendar, FileText, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { InvoicesService, OrdersService, CommissionPeriodsService } from "@/lib/api";
+import { InvoiceDeliveryState } from "@/lib/api";
 import type {
   InvoiceResponse,
   InvoiceBatchResponse,
   OrderDetailResponse,
   CommissionPeriodResponse,
-  InvoiceDeliveryState,
 } from "@/lib/api";
+import { useInvoiceBatches, useInvoices } from "@/hooks/use-invoices";
+import { useOrder } from "@/hooks/use-orders";
+import { useCommissionPeriod } from "@/hooks/use-commission-periods";
 import OrderDetailModal from "./OrderDetailModal";
 import { formatDate, formatCurrency, formatPercentage } from "@/lib/formatters";
 
@@ -107,14 +108,7 @@ export default function InvoicesPage() {
   };
 
   // Fetch batches to get batch name
-  const { data: batchesResponse } = useQuery({
-    queryKey: ["invoiceBatches", batchId],
-    queryFn: async () => {
-      const response = await InvoicesService.getInvoiceBatchesV1InvoicesBatchesGet();
-      return response;
-    },
-    enabled: !!batchId, // Only fetch if batchId is set
-  });
+  const { data: batchesResponse } = useInvoiceBatches(null, 0, 25);
 
   // Find the current batch
   const currentBatch: InvoiceBatchResponse | undefined =
@@ -123,32 +117,13 @@ export default function InvoicesPage() {
       : undefined;
 
   // Fetch order to get order number
-  const { data: orderResponse } = useQuery({
-    queryKey: ["order", orderId],
-    queryFn: async () => {
-      if (!orderId) return null;
-      const response = await OrdersService.getOrderV1OrdersOrderIdGet(orderId);
-      return response;
-    },
-    enabled: !!orderId, // Only fetch if orderId is set
-  });
+  const { data: orderResponse } = useOrder(orderId, !!orderId);
 
   const currentOrder: OrderDetailResponse | undefined =
     orderId && orderResponse?.success && orderResponse?.data ? orderResponse.data : undefined;
 
   // Fetch commission period to get period details
-  const { data: periodResponse } = useQuery({
-    queryKey: ["commissionPeriod", commissionPeriodId],
-    queryFn: async () => {
-      if (!commissionPeriodId) return null;
-      const response =
-        await CommissionPeriodsService.getCommissionPeriodV1CommissionPeriodsPeriodIdGet(
-          commissionPeriodId
-        );
-      return response;
-    },
-    enabled: !!commissionPeriodId, // Only fetch if commissionPeriodId is set
-  });
+  const { data: periodResponse } = useCommissionPeriod(commissionPeriodId, !!commissionPeriodId);
 
   const currentPeriod: CommissionPeriodResponse | undefined =
     commissionPeriodId && periodResponse?.success && periodResponse?.data
@@ -173,34 +148,17 @@ export default function InvoicesPage() {
     data: invoicesResponse,
     isLoading,
     error,
-  } = useQuery({
-    queryKey: [
-      "invoices",
-      batchId,
-      orderId,
-      commissionPeriodId,
-      search,
-      invoiceDateStart,
-      invoiceDateEnd,
-      scheduleFilter,
-      page,
-      limit,
-    ],
-    queryFn: async () => {
-      const response = await InvoicesService.getInvoicesV1InvoicesGet(
-        batchId,
-        orderId,
-        commissionPeriodId,
-        invoiceDateStart || null,
-        invoiceDateEnd || null,
-        search || null,
-        scheduleFilter as InvoiceDeliveryState,
-        page,
-        limit
-      );
-      return response;
-    },
-  });
+  } = useInvoices(
+    batchId,
+    orderId,
+    commissionPeriodId,
+    invoiceDateStart || null,
+    invoiceDateEnd || null,
+    search || null,
+    scheduleFilter as InvoiceDeliveryState,
+    page,
+    limit
+  );
 
   const invoices: InvoiceResponse[] =
     invoicesResponse?.success && invoicesResponse?.data ? invoicesResponse.data : [];

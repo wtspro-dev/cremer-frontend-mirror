@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { OrdersService } from "@/lib/api";
 import type { OrderDetailResponse } from "@/lib/api";
+import { useOrder } from "@/hooks/use-orders";
 import Modal from "@/components/ui/Modal";
 import {
   formatDate,
@@ -24,15 +23,10 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
 
   // Fetch order details when modal is open
-  const { data: orderDetailResponse, isLoading: isLoadingOrderDetail } = useQuery({
-    queryKey: ["orderDetail", orderId],
-    queryFn: async () => {
-      if (!orderId) return null;
-      const response = await OrdersService.getOrderV1OrdersOrderIdGet(orderId);
-      return response;
-    },
-    enabled: !!orderId && isOpen,
-  });
+  const { data: orderDetailResponse, isLoading: isLoadingOrderDetail } = useOrder(
+    orderId,
+    !!orderId && isOpen
+  );
 
   const orderDetail: OrderDetailResponse | null =
     orderDetailResponse?.success && orderDetailResponse?.data ? orderDetailResponse.data : null;

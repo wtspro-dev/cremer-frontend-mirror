@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { Search, Calendar, Package, X, Eye, ChevronLeft, ChevronRight } from "lucide-react";
-import { OrdersService, OrderBillingStatus } from "@/lib/api";
+import { OrderBillingStatus } from "@/lib/api";
 import type { OrderResponse, OrderBatchResponse } from "@/lib/api";
+import { useOrderBatches, useOrders } from "@/hooks/use-orders";
 import OrderDetailModal from "./OrderDetailModal";
 import { formatDate, formatCNPJ } from "@/lib/formatters";
 
@@ -58,14 +58,7 @@ export default function OrdersPage() {
   };
 
   // Fetch batches to get batch name
-  const { data: batchesResponse } = useQuery({
-    queryKey: ["orderBatches"],
-    queryFn: async () => {
-      const response = await OrdersService.getOrderBatchesV1OrdersBatchesGet();
-      return response;
-    },
-    enabled: !!batchId, // Only fetch if batchId is set
-  });
+  const { data: batchesResponse } = useOrderBatches(null, 0, 25);
 
   // Find the current batch
   const currentBatch: OrderBatchResponse | undefined =
@@ -83,21 +76,15 @@ export default function OrdersPage() {
     data: ordersResponse,
     isLoading,
     error,
-  } = useQuery({
-    queryKey: ["orders", batchId, search, orderDateStart, orderDateEnd, billingStatus, page, limit],
-    queryFn: async () => {
-      const response = await OrdersService.getOrdersV1OrdersGet(
-        batchId,
-        orderDateStart || null,
-        orderDateEnd || null,
-        search || null,
-        billingStatus,
-        page,
-        limit
-      );
-      return response;
-    },
-  });
+  } = useOrders(
+    batchId,
+    orderDateStart || null,
+    orderDateEnd || null,
+    search || null,
+    billingStatus,
+    page,
+    limit
+  );
 
   const orders: OrderResponse[] =
     ordersResponse?.success && ordersResponse?.data ? ordersResponse.data : [];

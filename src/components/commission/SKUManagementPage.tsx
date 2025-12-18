@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, X, Plus, Eye, Edit, ChevronLeft, ChevronRight, Package } from "lucide-react";
-import { SkUsService } from "@/lib/api";
-import type { SkuResponse, CreateSkuRequest, UpdateSkuRequest } from "@/lib/api";
+import type { SkuResponse, CreateSkuRequest } from "@/lib/api";
+import { useSkus, useCreateSku, useUpdateSku } from "@/hooks/use-skus";
 import SKUDetailModal from "./SKUDetailModal";
 import Modal from "@/components/ui/Modal";
 import { formatPercentage } from "@/lib/formatters";
@@ -17,7 +16,6 @@ export default function SKUManagementPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingSku, setEditingSku] = useState<SkuResponse | null>(null);
-  const queryClient = useQueryClient();
 
   // Form state
   const [formData, setFormData] = useState<CreateSkuRequest>({
@@ -34,44 +32,17 @@ export default function SKUManagementPage() {
   }, [search]);
 
   // Fetch SKUs from API
-  const {
-    data: skusResponse,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["skus", search, page, limit],
-    queryFn: async () => {
-      const response = await SkUsService.getSkusV1SkusGet(search || null, page, limit);
-      return response;
-    },
-  });
+  const { data: skusResponse, isLoading, error } = useSkus(search || null, page, limit);
 
   const skus: SkuResponse[] = skusResponse?.success && skusResponse?.data ? skusResponse.data : [];
   const totalSkus = skusResponse?.total ?? 0;
   const totalPages = Math.ceil(totalSkus / limit);
 
   // Create SKU mutation
-  const createSkuMutation = useMutation({
-    mutationFn: (data: CreateSkuRequest) => SkUsService.createSkuV1SkusPost(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["skus"] });
-      setIsFormModalOpen(false);
-      resetForm();
-    },
-  });
+  const createSkuMutation = useCreateSku();
 
   // Update SKU mutation
-  const updateSkuMutation = useMutation({
-    mutationFn: ({ skuId, data }: { skuId: number; data: UpdateSkuRequest }) =>
-      SkUsService.updateSkuV1SkusSkuIdPut(skuId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["skus"] });
-      queryClient.invalidateQueries({ queryKey: ["skuDetail"] });
-      setIsFormModalOpen(false);
-      setEditingSku(null);
-      resetForm();
-    },
-  });
+  const updateSkuMutation = useUpdateSku();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -146,12 +117,26 @@ export default function SKUManagementPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingSku) {
-      updateSkuMutation.mutate({
-        skuId: editingSku.id,
-        data: formData,
-      });
+      updateSkuMutation.mutate(
+        {
+          skuId: editingSku.id,
+          data: formData,
+        },
+        {
+          onSuccess: () => {
+            setIsFormModalOpen(false);
+            setEditingSku(null);
+            resetForm();
+          },
+        }
+      );
     } else {
-      createSkuMutation.mutate(formData);
+      createSkuMutation.mutate(formData, {
+        onSuccess: () => {
+          setIsFormModalOpen(false);
+          resetForm();
+        },
+      });
     }
   };
 

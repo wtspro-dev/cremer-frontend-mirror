@@ -1,16 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "@/i18n/navigation";
-import {
-  CommissionPeriodsService,
-  InvoiceDeliveryState,
-  InvoicesService,
-  OrdersService,
-  OrderBillingStatus,
-} from "@/lib/api";
+import { InvoiceDeliveryState, OrderBillingStatus } from "@/lib/api";
 import type { CommissionPeriodResponse } from "@/lib/api";
+import { useCommissionPeriods } from "@/hooks/use-commission-periods";
+import { useInvoices } from "@/hooks/use-invoices";
+import { useOrders } from "@/hooks/use-orders";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { TrendingUp, Calendar, DollarSign, AlertCircle, ShoppingCart } from "lucide-react";
@@ -33,37 +29,20 @@ export default function CommissionDashboard() {
     data: periodsResponse,
     isLoading,
     error,
-  } = useQuery({
-    queryKey: ["commissionPeriods"],
-    queryFn: async () => {
-      const response = await CommissionPeriodsService.getCommissionPeriodsV1CommissionPeriodsGet(
-        null,
-        null,
-        0,
-        100 // Get a large number to fetch all periods
-      );
-      return response;
-    },
-  });
+  } = useCommissionPeriods(null, null, 0, 100);
 
   // Fetch unscheduled invoices
-  const { data: unscheduledInvoicesResponse } = useQuery({
-    queryKey: ["unscheduledInvoices"],
-    queryFn: async () => {
-      const response = await InvoicesService.getInvoicesV1InvoicesGet(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        InvoiceDeliveryState.UNSCHEDULED,
-        0,
-        100 // Get a large number to calculate total
-      );
-      return response;
-    },
-  });
+  const { data: unscheduledInvoicesResponse } = useInvoices(
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    InvoiceDeliveryState.UNSCHEDULED,
+    0,
+    100 // Get a large number to calculate total
+  );
 
   // Calculate total commission value of unscheduled invoices
   const unscheduledTotal = useMemo(() => {
@@ -77,38 +56,26 @@ export default function CommissionDashboard() {
   }, [unscheduledInvoicesResponse]);
 
   // Fetch fully billed orders
-  const { data: fullyBilledOrdersResponse } = useQuery({
-    queryKey: ["fullyBilledOrders"],
-    queryFn: async () => {
-      const response = await OrdersService.getOrdersV1OrdersGet(
-        null,
-        null,
-        null,
-        null,
-        OrderBillingStatus.FULLY_BILLED,
-        0,
-        1 // Only need the total, so limit to 1
-      );
-      return response;
-    },
-  });
+  const { data: fullyBilledOrdersResponse } = useOrders(
+    null,
+    null,
+    null,
+    null,
+    OrderBillingStatus.FULLY_BILLED,
+    0,
+    1 // Only need the total, so limit to 1
+  );
 
   // Fetch not fully billed orders
-  const { data: notFullyBilledOrdersResponse } = useQuery({
-    queryKey: ["notFullyBilledOrders"],
-    queryFn: async () => {
-      const response = await OrdersService.getOrdersV1OrdersGet(
-        null,
-        null,
-        null,
-        null,
-        OrderBillingStatus.NOT_FULLY_BILLED,
-        0,
-        1 // Only need the total, so limit to 1
-      );
-      return response;
-    },
-  });
+  const { data: notFullyBilledOrdersResponse } = useOrders(
+    null,
+    null,
+    null,
+    null,
+    OrderBillingStatus.NOT_FULLY_BILLED,
+    0,
+    1 // Only need the total, so limit to 1
+  );
 
   const fullyBilledCount = fullyBilledOrdersResponse?.total ?? 0;
   const notFullyBilledCount = notFullyBilledOrdersResponse?.total ?? 0;

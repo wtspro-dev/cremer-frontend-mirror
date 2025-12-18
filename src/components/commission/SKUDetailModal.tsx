@@ -1,8 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { SkUsService } from "@/lib/api";
 import type { SkuResponse } from "@/lib/api";
+import { useSku } from "@/hooks/use-skus";
 import Modal from "@/components/ui/Modal";
 import { formatDateTime, formatPercentage } from "@/lib/formatters";
 
@@ -14,15 +13,10 @@ interface SKUDetailModalProps {
 
 export default function SKUDetailModal({ skuId, isOpen, onClose }: SKUDetailModalProps) {
   // Fetch SKU details when modal is open
-  const { data: skuDetailResponse, isLoading: isLoadingSkuDetail } = useQuery({
-    queryKey: ["skuDetail", skuId],
-    queryFn: async () => {
-      if (!skuId) return null;
-      const response = await SkUsService.getSkuV1SkusSkuIdGet(skuId);
-      return response;
-    },
-    enabled: !!skuId && isOpen,
-  });
+  const { data: skuDetailResponse, isLoading: isLoadingSkuDetail } = useSku(
+    skuId,
+    !!skuId && isOpen
+  );
 
   const skuDetail: SkuResponse | null =
     skuDetailResponse?.success && skuDetailResponse?.data ? skuDetailResponse.data : null;

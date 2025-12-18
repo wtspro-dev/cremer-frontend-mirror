@@ -11,8 +11,10 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 interface SidebarItem {
   href: string;
@@ -51,6 +53,7 @@ const menuItems: SidebarItem[] = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleCollapse = () => {
@@ -99,6 +102,20 @@ export default function Sidebar() {
           );
         })}
       </nav>
+      <div className="p-4 border-t">
+        <button
+          onClick={logout}
+          className={cn(
+            "w-full flex items-center rounded-lg text-left transition-colors",
+            isCollapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
+            "hover:bg-muted text-muted-foreground hover:text-foreground"
+          )}
+          title={isCollapsed ? "Sair" : undefined}
+        >
+          <LogOut className="h-5 w-5 flex-shrink-0" />
+          {!isCollapsed && <span className="font-medium">Sair</span>}
+        </button>
+      </div>
     </div>
   );
 }

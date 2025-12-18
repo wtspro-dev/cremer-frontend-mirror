@@ -2,12 +2,9 @@
 
 import { GoogleCredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/hooks/use-auth";
-import { useParams } from "next/navigation";
 
 export default function LoginPage() {
   const { login, isLoading, error } = useAuth();
-  const params = useParams();
-  const locale = params.locale as string;
 
   const handleGoogleSuccess = async (credentialResponse: GoogleCredentialResponse) => {
     if (credentialResponse.credential) {
@@ -28,13 +25,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg dark:bg-gray-800">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {locale === "pt" ? "Entrar" : "Sign In"}
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Entrar</h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            {locale === "pt"
-              ? "Faça login com sua conta Google"
-              : "Sign in with your Google account"}
+            Faça login com sua conta Google
           </p>
         </div>
 
@@ -48,7 +41,7 @@ export default function LoginPage() {
 
         {isLoading && (
           <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-            {locale === "pt" ? "Autenticando..." : "Authenticating..."}
+            Autenticando...
           </div>
         )}
 

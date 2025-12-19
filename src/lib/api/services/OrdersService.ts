@@ -74,7 +74,7 @@ export class OrdersService {
         orderDateStart?: (string | null),
         orderDateEnd?: (string | null),
         search?: (string | null),
-        billingStatus: OrderBillingStatus = 'all',
+        billingStatus?: (OrderBillingStatus | string),
         page?: number,
         limit: number = 25,
     ): CancelablePromise<PaginatedApiResponse_list_OrderResponse___ApiResponseError_> {

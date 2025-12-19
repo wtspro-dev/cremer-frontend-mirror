@@ -78,7 +78,7 @@ export class InvoicesService {
         commissionPaymentDateStart?: (string | null),
         commissionPaymentDateEnd?: (string | null),
         search?: (string | null),
-        deliveryState: InvoiceDeliveryState = 'all',
+        deliveryState?: (InvoiceDeliveryState | string),
         page?: number,
         limit: number = 25,
     ): CancelablePromise<PaginatedApiResponse_list_InvoiceResponse___ApiResponseError_> {

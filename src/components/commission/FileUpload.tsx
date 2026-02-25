@@ -17,6 +17,8 @@ interface FileUploadProps {
   onError?: (error: string) => void;
 }
 
+const MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+
 const fileTypeLabels: Record<FileUploadType, { label: string; accept: string }> = {
   "sku-config": {
     label: "Configuração de Comissão SKU (Excel)",
@@ -64,6 +66,16 @@ export default function FileUpload({
     setStatus("idle");
     setErrorMessage("");
 
+    const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+    if (totalSize > MAX_UPLOAD_SIZE_BYTES) {
+      const msg = `O tamanho total dos arquivos (${(totalSize / 1024 / 1024).toFixed(1)} MB) excede o limite máximo de 50 MB por envio.`;
+      setErrorMessage(msg);
+      setStatus("error");
+      onError?.(msg);
+      clearInput();
+      return;
+    }
+
     if (type === "orders-pdf" || type === "invoices-excel") {
       setUploadedFiles(files);
       clearInput();
@@ -82,6 +94,7 @@ export default function FileUpload({
             onSKUConfigLoaded?.(data, file);
           }
           setStatus("success");
+          toast.success("Arquivo processado", "Configuração SKU carregada com sucesso.");
           break;
         }
       }
@@ -120,6 +133,7 @@ export default function FileUpload({
         const uploadErrors = response.data?.errors ?? [];
         if (response.success && uploadErrors.length === 0) {
           setStatus("success");
+          toast.success("Upload concluído", "Pedidos enviados com sucesso.");
           onOrdersLoaded?.([], undefined, undefined);
           setUploadedFiles([]);
           clearInput();
@@ -178,6 +192,7 @@ export default function FileUpload({
         const uploadErrors = response.data?.errors ?? [];
         if (response.success && uploadErrors.length === 0) {
           setStatus("success");
+          toast.success("Upload concluído", "Notas fiscais enviadas com sucesso.");
           onDeliveryDatesLoaded?.([], undefined);
           setUploadedFiles([]);
           clearInput();
@@ -282,6 +297,7 @@ export default function FileUpload({
             <p className="text-xs text-muted-foreground mt-1">
               {config.accept} (múltiplos arquivos permitidos)
             </p>
+            <p className="text-xs text-muted-foreground mt-1">Tamanho máximo: 50 MB por envio</p>
           </label>
         </div>
       ) : type === "orders-pdf" || type === "invoices-excel" ? (

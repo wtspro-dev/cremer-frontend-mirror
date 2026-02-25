@@ -18,4 +18,15 @@ export class HealthCheckService {
             url: '/v1/health_check',
         });
     }
+    /**
+     * Sentry Test
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static sentryTestV1HealthCheckSentryTestGet(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/v1/health_check/sentry-test',
+        });
+    }
 }

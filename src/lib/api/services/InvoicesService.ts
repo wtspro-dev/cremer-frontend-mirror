@@ -15,15 +15,20 @@ export class InvoicesService {
     /**
      * Upload Invoices
      * @param formData
+     * @param locale Response locale, e.g. pt_BR, pt, en_US, en
      * @returns ApiResponse_UploadInvoicesResponse__ApiResponseError_ Successful Response
      * @throws ApiError
      */
     public static uploadInvoicesV1InvoicesUploadPost(
         formData: Body_upload_invoices_v1_invoices_upload_post,
+        locale: string = 'pt_BR',
     ): CancelablePromise<ApiResponse_UploadInvoicesResponse__ApiResponseError_> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/v1/invoices/upload',
+            query: {
+                'locale': locale,
+            },
             formData: formData,
             mediaType: 'multipart/form-data',
             errors: {

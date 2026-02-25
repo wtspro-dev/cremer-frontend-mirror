@@ -15,15 +15,20 @@ export class OrdersService {
     /**
      * Upload Orders
      * @param formData
+     * @param locale Response locale, e.g. pt_BR, pt, en_US, en
      * @returns ApiResponse_UploadOrdersResponse__ApiResponseError_ Successful Response
      * @throws ApiError
      */
     public static uploadOrdersV1OrdersUploadPost(
         formData: Body_upload_orders_v1_orders_upload_post,
+        locale: string = 'pt_BR',
     ): CancelablePromise<ApiResponse_UploadOrdersResponse__ApiResponseError_> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/v1/orders/upload',
+            query: {
+                'locale': locale,
+            },
             formData: formData,
             mediaType: 'multipart/form-data',
             errors: {

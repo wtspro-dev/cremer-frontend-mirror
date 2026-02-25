@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { api__api_endpoints__orders__UploadError } from './api__api_endpoints__orders__UploadError';
 export type UploadOrdersResponse = {
     total_files: number;
     processed_files: number;
@@ -10,6 +11,6 @@ export type UploadOrdersResponse = {
     created_orders: number;
     skipped_orders: number;
     total_items: number;
-    errors: Array<Record<string, any>>;
+    errors: Array<api__api_endpoints__orders__UploadError>;
 };
 

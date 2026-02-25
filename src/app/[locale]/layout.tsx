@@ -9,6 +9,7 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { routing } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import ConditionalLayout from "@/components/layout/ConditionalLayout";
+import { ToastProvider } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
   title: "Dashboard de Comissão de Vendas",
@@ -40,7 +41,9 @@ export default async function RootLayout({
                     enableSystem
                     disableTransitionOnChange
                   >
-                    <ConditionalLayout>{children}</ConditionalLayout>
+                    <ToastProvider>
+                      <ConditionalLayout>{children}</ConditionalLayout>
+                    </ToastProvider>
                   </ThemeProvider>
                 </GoogleOAuthProviderWrapper>
               </QueryProvider>

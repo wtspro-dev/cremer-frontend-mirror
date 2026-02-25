@@ -7,6 +7,7 @@ import { processSKUConfigFile, type ParsedOrderItem } from "@/lib/file-processor
 import type { SKUCommission, Order, DeliveryDate } from "@/types/commission";
 import { useUploadOrders } from "@/hooks/use-orders";
 import { useUploadInvoices } from "@/hooks/use-invoices";
+import { useToast } from "@/components/ui/toast";
 
 interface FileUploadProps {
   type: FileUploadType;
@@ -47,6 +48,7 @@ export default function FileUpload({
 
   const uploadOrdersMutation = useUploadOrders();
   const uploadInvoicesMutation = useUploadInvoices();
+  const toast = useToast();
 
   const config = fileTypeLabels[type];
 
@@ -115,7 +117,8 @@ export default function FileUpload({
 
     uploadOrdersMutation.mutate(formData, {
       onSuccess: (response) => {
-        if (response.success && response.data) {
+        const uploadErrors = response.data?.errors ?? [];
+        if (response.success && uploadErrors.length === 0) {
           setStatus("success");
           onOrdersLoaded?.([], undefined, undefined);
           setUploadedFiles([]);
@@ -125,10 +128,22 @@ export default function FileUpload({
             setErrorMessage("");
           }, 2000);
         } else {
-          const errorMsg = "Erro ao fazer upload do arquivo";
-          setErrorMessage(errorMsg);
           setStatus("error");
-          onError?.(errorMsg);
+          if (uploadErrors.length > 0) {
+            toast.error(
+              "Erro ao fazer upload dos pedidos",
+              <ul className="mt-1 list-disc list-inside space-y-0.5">
+                {uploadErrors.map((e, i) => (
+                  <li key={i}>{e.message}</li>
+                ))}
+              </ul>
+            );
+            setErrorMessage("Verifique os erros detalhados no alerta acima.");
+          } else {
+            const errorMsg = "Erro ao fazer upload do arquivo";
+            setErrorMessage(errorMsg);
+            onError?.(errorMsg);
+          }
         }
         setIsProcessing(false);
       },
@@ -137,6 +152,7 @@ export default function FileUpload({
           error instanceof Error
             ? error.message
             : "Erro ao fazer upload do arquivo. Tente novamente.";
+        toast.error("Erro ao fazer upload dos pedidos", errorMsg);
         setErrorMessage(errorMsg);
         setStatus("error");
         onError?.(errorMsg);
@@ -159,7 +175,8 @@ export default function FileUpload({
 
     uploadInvoicesMutation.mutate(formData, {
       onSuccess: (response) => {
-        if (response.success && response.data) {
+        const uploadErrors = response.data?.errors ?? [];
+        if (response.success && uploadErrors.length === 0) {
           setStatus("success");
           onDeliveryDatesLoaded?.([], undefined);
           setUploadedFiles([]);
@@ -169,10 +186,22 @@ export default function FileUpload({
             setErrorMessage("");
           }, 2000);
         } else {
-          const errorMsg = "Erro ao fazer upload do arquivo";
-          setErrorMessage(errorMsg);
           setStatus("error");
-          onError?.(errorMsg);
+          if (uploadErrors.length > 0) {
+            toast.error(
+              "Erro ao fazer upload das notas fiscais",
+              <ul className="mt-1 list-disc list-inside space-y-0.5">
+                {uploadErrors.map((e, i) => (
+                  <li key={i}>{e.message}</li>
+                ))}
+              </ul>
+            );
+            setErrorMessage("Verifique os erros detalhados no alerta acima.");
+          } else {
+            const errorMsg = "Erro ao fazer upload do arquivo";
+            setErrorMessage(errorMsg);
+            onError?.(errorMsg);
+          }
         }
         setIsProcessing(false);
       },
@@ -181,6 +210,7 @@ export default function FileUpload({
           error instanceof Error
             ? error.message
             : "Erro ao fazer upload do arquivo. Tente novamente.";
+        toast.error("Erro ao fazer upload das notas fiscais", errorMsg);
         setErrorMessage(errorMsg);
         setStatus("error");
         onError?.(errorMsg);

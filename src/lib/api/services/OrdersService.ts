@@ -69,6 +69,7 @@ export class OrdersService {
      * @param orderDateEnd End date for order date range filter
      * @param search Search string to match against order_number, customer_name, or customer_cnpj
      * @param billingStatus
+     * @param state Filter by state (2-letter UF)
      * @param page Page number (0-indexed)
      * @param limit Number of items per page
      * @returns PaginatedApiResponse_list_OrderResponse___ApiResponseError_ Successful Response
@@ -80,6 +81,7 @@ export class OrdersService {
         orderDateEnd?: (string | null),
         search?: (string | null),
         billingStatus?: (OrderBillingStatus | string),
+        state?: (string | null),
         page?: number,
         limit: number = 25,
     ): CancelablePromise<PaginatedApiResponse_list_OrderResponse___ApiResponseError_> {
@@ -92,6 +94,7 @@ export class OrdersService {
                 'order_date_end': orderDateEnd,
                 'search': search,
                 'billing_status': billingStatus,
+                'state': state,
                 'page': page,
                 'limit': limit,
             },

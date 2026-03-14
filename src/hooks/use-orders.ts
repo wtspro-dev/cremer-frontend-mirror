@@ -29,11 +29,22 @@ export function useOrders(
   orderDateEnd?: string | null,
   search?: string | null,
   billingStatus: OrderBillingStatus = OrderBillingStatus.ALL,
+  state?: string | null,
   page: number = 0,
   limit: number = 25
 ) {
   return useQuery<PaginatedApiResponse_list_OrderResponse___ApiResponseError_>({
-    queryKey: ["orders", batchId, orderDateStart, orderDateEnd, search, billingStatus, page, limit],
+    queryKey: [
+      "orders",
+      batchId,
+      orderDateStart,
+      orderDateEnd,
+      search,
+      billingStatus,
+      state,
+      page,
+      limit,
+    ],
     queryFn: async () => {
       return await OrdersService.getOrdersV1OrdersGet(
         batchId,
@@ -41,6 +52,7 @@ export function useOrders(
         orderDateEnd,
         search,
         billingStatus,
+        state,
         page,
         limit
       );

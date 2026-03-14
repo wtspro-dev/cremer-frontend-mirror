@@ -12,6 +12,7 @@ export class CommissionPeriodsService {
      * Get Commission Periods
      * @param startDate Start date for commission period range filter (inclusive)
      * @param endDate End date for commission period range filter (inclusive)
+     * @param state Filter by state (2-letter UF); when set, total_commission is recalculated for that state only
      * @param page Page number (0-indexed)
      * @param limit Number of items per page
      * @returns PaginatedApiResponse_list_CommissionPeriodResponse___ApiResponseError_ Successful Response
@@ -20,6 +21,7 @@ export class CommissionPeriodsService {
     public static getCommissionPeriodsV1CommissionPeriodsGet(
         startDate?: (string | null),
         endDate?: (string | null),
+        state?: (string | null),
         page?: number,
         limit: number = 25,
     ): CancelablePromise<PaginatedApiResponse_list_CommissionPeriodResponse___ApiResponseError_> {
@@ -29,6 +31,7 @@ export class CommissionPeriodsService {
             query: {
                 'start_date': startDate,
                 'end_date': endDate,
+                'state': state,
                 'page': page,
                 'limit': limit,
             },

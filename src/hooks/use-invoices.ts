@@ -31,6 +31,7 @@ export function useInvoices(
   commissionPaymentDateEnd?: string | null,
   search?: string | null,
   deliveryState: InvoiceDeliveryState = InvoiceDeliveryState.ALL,
+  state?: string | null,
   page: number = 0,
   limit: number = 25
 ) {
@@ -44,6 +45,7 @@ export function useInvoices(
       commissionPaymentDateEnd,
       search,
       deliveryState,
+      state,
       page,
       limit,
     ],
@@ -56,6 +58,7 @@ export function useInvoices(
         commissionPaymentDateEnd,
         search,
         deliveryState,
+        state,
         page,
         limit
       );

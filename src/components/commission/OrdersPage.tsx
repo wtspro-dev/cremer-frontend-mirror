@@ -23,6 +23,9 @@ export default function OrdersPage() {
   const [page, setPage] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
 
+  const stateParam = searchParams.get("state");
+  const stateFilter = stateParam && stateParam !== "all" ? stateParam : null;
+
   // Read batch_id and billing_status from URL query params
   useEffect(() => {
     const batchIdParam = searchParams.get("batch_id");
@@ -69,7 +72,7 @@ export default function OrdersPage() {
   // Reset to first page when filters change
   useEffect(() => {
     setPage(0);
-  }, [batchId, search, orderDateStart, orderDateEnd, billingStatus]);
+  }, [batchId, search, orderDateStart, orderDateEnd, billingStatus, stateFilter]);
 
   // Fetch orders from API
   const {
@@ -82,6 +85,7 @@ export default function OrdersPage() {
     orderDateEnd || null,
     search || null,
     billingStatus,
+    stateFilter,
     page,
     limit
   );
@@ -275,6 +279,7 @@ export default function OrdersPage() {
                   <th className="text-left p-4 border-b font-medium">Data do Pedido</th>
                   <th className="text-left p-4 border-b font-medium">Cliente</th>
                   <th className="text-left p-4 border-b font-medium">CNPJ</th>
+                  <th className="text-left p-4 border-b font-medium">Estado</th>
                   <th className="text-left p-4 border-b font-medium">Endereço</th>
                   <th className="text-center p-4 border-b font-medium">Itens</th>
                   <th className="text-center p-4 border-b font-medium">Ações</th>
@@ -287,6 +292,11 @@ export default function OrdersPage() {
                     <td className="p-4">{formatDate(order.order_date)}</td>
                     <td className="p-4">{order.customer_name}</td>
                     <td className="p-4 font-mono text-sm">{formatCNPJ(order.customer_cnpj)}</td>
+                    <td className="p-4">
+                      <span className="font-medium">
+                        {(order as OrderResponse & { state?: string }).state ?? "—"}
+                      </span>
+                    </td>
                     <td className="p-4 text-sm text-muted-foreground">{order.address}</td>
                     <td className="p-4 text-center">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-medium">

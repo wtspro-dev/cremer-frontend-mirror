@@ -11,15 +11,17 @@ import type {
 export function useCommissionPeriods(
   startDate?: string | null,
   endDate?: string | null,
+  state?: string | null,
   page: number = 0,
   limit: number = 25
 ) {
   return useQuery<PaginatedApiResponse_list_CommissionPeriodResponse___ApiResponseError_>({
-    queryKey: ["commissionPeriods", startDate, endDate, page, limit],
+    queryKey: ["commissionPeriods", startDate, endDate, state, page, limit],
     queryFn: async () => {
       return await CommissionPeriodsService.getCommissionPeriodsV1CommissionPeriodsGet(
         startDate,
         endDate,
+        state,
         page,
         limit
       );

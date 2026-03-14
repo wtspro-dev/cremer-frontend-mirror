@@ -32,6 +32,9 @@ export default function InvoicesPage() {
   const [page, setPage] = useState<number>(0);
   const [limit, setLimit] = useState<number>(10);
 
+  const stateParam = searchParams.get("state");
+  const stateFilter = stateParam && stateParam !== "all" ? stateParam : null;
+
   // Read batch_id, order_id, commission_period_id, delivery_date_start, and delivery_state from URL query params
   useEffect(() => {
     const batchIdParam = searchParams.get("batch_id");
@@ -141,6 +144,7 @@ export default function InvoicesPage() {
     invoiceDateStart,
     invoiceDateEnd,
     scheduleFilter,
+    stateFilter,
   ]);
 
   // Fetch invoices from API
@@ -156,6 +160,7 @@ export default function InvoicesPage() {
     invoiceDateEnd || null,
     search || null,
     scheduleFilter as InvoiceDeliveryState,
+    stateFilter,
     page,
     limit
   );

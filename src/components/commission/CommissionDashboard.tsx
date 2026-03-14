@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { InvoiceDeliveryState, OrderBillingStatus } from "@/lib/api";
 import type { CommissionPeriodResponse } from "@/lib/api";
@@ -23,9 +24,17 @@ import {
 
 export default function CommissionDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const stateParam = searchParams.get("state");
+  const stateFilter = stateParam && stateParam !== "all" ? stateParam : null;
 
   // Fetch all commission periods
-  const { data: periodsResponse, isLoading, error } = useCommissionPeriods(null, null, 0, 100);
+  const {
+    data: periodsResponse,
+    isLoading,
+    error,
+  } = useCommissionPeriods(null, null, stateFilter, 0, 100);
 
   // Fetch unscheduled invoices
   const { data: unscheduledInvoicesResponse } = useInvoices(
@@ -36,6 +45,7 @@ export default function CommissionDashboard() {
     null,
     null,
     InvoiceDeliveryState.UNSCHEDULED,
+    stateFilter,
     0,
     100 // Get a large number to calculate total
   );
@@ -58,6 +68,7 @@ export default function CommissionDashboard() {
     null,
     null,
     OrderBillingStatus.FULLY_BILLED,
+    stateFilter,
     0,
     1 // Only need the total, so limit to 1
   );
@@ -69,6 +80,7 @@ export default function CommissionDashboard() {
     null,
     null,
     OrderBillingStatus.NOT_FULLY_BILLED,
+    stateFilter,
     0,
     1 // Only need the total, so limit to 1
   );

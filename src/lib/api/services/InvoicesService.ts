@@ -71,6 +71,7 @@ export class InvoicesService {
      * @param commissionPaymentDateEnd End date for commission payment date range filter
      * @param search Search string to match against invoice_number, customer_cnpj, or product_code
      * @param deliveryState
+     * @param state Filter by state (2-letter UF)
      * @param page Page number (0-indexed)
      * @param limit Number of items per page
      * @returns PaginatedApiResponse_list_InvoiceResponse___ApiResponseError_ Successful Response
@@ -84,6 +85,7 @@ export class InvoicesService {
         commissionPaymentDateEnd?: (string | null),
         search?: (string | null),
         deliveryState?: (InvoiceDeliveryState | string),
+        state?: (string | null),
         page?: number,
         limit: number = 25,
     ): CancelablePromise<PaginatedApiResponse_list_InvoiceResponse___ApiResponseError_> {
@@ -98,6 +100,7 @@ export class InvoicesService {
                 'commission_payment_date_end': commissionPaymentDateEnd,
                 'search': search,
                 'delivery_state': deliveryState,
+                'state': state,
                 'page': page,
                 'limit': limit,
             },
